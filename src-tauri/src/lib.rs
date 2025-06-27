@@ -9,6 +9,13 @@ mod database_commands;
 mod web_scraper;
 mod web_scraper_commands;
 mod processing_commands;
+mod catalog_commands;
+mod sync_commands;
+mod performance_monitor;
+mod background_tasks;
+mod performance_commands;
+mod cache_manager;
+mod cache_commands;
 pub mod models;
 pub mod validation;
 pub mod schema;
@@ -66,6 +73,31 @@ use processing_commands::{
     process_advanced_chunking, validate_chunking_config,
     get_chunking_strategies, test_chunking_config
 };
+use catalog_commands::{
+    CatalogManager,
+    get_all_books, search_catalog, get_book_by_id, enrich_book_metadata,
+    export_catalog, get_related_books, get_catalog_stats, generate_catalog_report
+};
+use sync_commands::{
+    get_sync_status, configure_sync, start_sync, stop_sync,
+    list_backup_archives, create_backup, restore_backup, delete_backup,
+    verify_backup, configure_backup
+};
+use performance_monitor::PerformanceMonitor;
+use background_tasks::BackgroundTaskSystem;
+use performance_commands::{
+    get_performance_metrics, get_resource_recommendation, optimize_system_performance,
+    export_performance_metrics, cleanup_performance_data, submit_background_task,
+    get_task_status, get_all_background_tasks, cancel_background_task,
+    get_task_queue_length, get_background_system_stats
+};
+use cache_manager::{CacheManager, CacheConfig};
+use cache_commands::{
+    CacheManagerState,
+    get_cache_stats, get_cache_config, update_cache_config, clear_cache,
+    cleanup_cache, cache_url_response, get_cached_data, store_in_cache,
+    get_cache_recommendations, export_cache_metrics
+};
 use tokio::sync::Mutex;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -97,6 +129,22 @@ pub async fn run() {
   let web_scraper_manager = WebScraperManager::new(app_data_dir.clone());
   let web_scraper_state: WebScraperState = Arc::new(Mutex::new(web_scraper_manager));
   
+  // Initialize catalog manager
+  let catalog_manager = CatalogManager::new(app_data_dir.clone());
+  
+  // Initialize performance monitor and background task system
+  let performance_monitor = Arc::new(PerformanceMonitor::new());
+  let background_task_system = Arc::new(BackgroundTaskSystem::new(4, performance_monitor.clone()));
+  
+  // Initialize cache manager
+  let cache_config = CacheConfig {
+    cache_directory: app_data_dir.join("cache"),
+    ..Default::default()
+  };
+  let cache_manager = CacheManager::new(cache_config)
+    .expect("Failed to initialize cache manager");
+  let cache_manager_state: CacheManagerState = Arc::new(Mutex::new(cache_manager));
+  
   tauri::Builder::default()
     .manage(Mutex::new(python_manager) as PythonManagerState)
     .manage(Mutex::new(environment_manager) as EnvironmentManagerState)
@@ -104,6 +152,10 @@ pub async fn run() {
     .manage(Mutex::new(file_system))
     .manage(database_state)
     .manage(web_scraper_state)
+    .manage(Mutex::new(catalog_manager))
+    .manage(performance_monitor)
+    .manage(background_task_system)
+    .manage(cache_manager_state)
     .invoke_handler(tauri::generate_handler![
       // Python Manager commands
       discover_python_environment,
@@ -183,7 +235,50 @@ pub async fn run() {
       process_advanced_chunking,
       validate_chunking_config,
       get_chunking_strategies,
-      test_chunking_config
+      test_chunking_config,
+      // Catalog commands
+      get_all_books,
+      search_catalog,
+      get_book_by_id,
+      enrich_book_metadata,
+      export_catalog,
+      get_related_books,
+      get_catalog_stats,
+      generate_catalog_report,
+      // Sync and Backup commands
+      get_sync_status,
+      configure_sync,
+      start_sync,
+      stop_sync,
+      list_backup_archives,
+      create_backup,
+      restore_backup,
+      delete_backup,
+      verify_backup,
+      configure_backup,
+      // Performance and Background Task commands
+      get_performance_metrics,
+      get_resource_recommendation,
+      optimize_system_performance,
+      export_performance_metrics,
+      cleanup_performance_data,
+      submit_background_task,
+      get_task_status,
+      get_all_background_tasks,
+      cancel_background_task,
+      get_task_queue_length,
+      get_background_system_stats,
+      // Cache commands
+      get_cache_stats,
+      get_cache_config,
+      update_cache_config,
+      clear_cache,
+      cleanup_cache,
+      cache_url_response,
+      get_cached_data,
+      store_in_cache,
+      get_cache_recommendations,
+      export_cache_metrics
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {
