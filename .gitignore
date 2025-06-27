@@ -123,8 +123,8 @@ Temporary Items
 temp/
 tmp/
 
-# Data files (sample data okay, not production data)
-/data/production/
+# Data files - exclude all data to avoid copyright issues
+/data/
 *.db
 *.sqlite
 
