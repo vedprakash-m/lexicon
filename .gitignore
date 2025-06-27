@@ -77,6 +77,22 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Python notebooks and outputs that may contain sensitive data
+*.ipynb_checkpoints/
+*.ipynb.bak
+
+# AI/ML model files and data
+*.model
+*.pkl
+*.pickle
+*.h5
+*.pt
+*.pth
+*.onnx
+embeddings/
+models/
+checkpoints/
+
 # Virtual environments
 .env
 .venv
@@ -127,6 +143,42 @@ tmp/
 /data/
 *.db
 *.sqlite
+*.sqlite3
+*.json.bak
+
+# Content and scraped data - prevent copyright violations
+/scraped/
+/content/
+/datasets/
+/output/
+/exports/
+*.jsonl
+*.parquet
+/legacy/data/
+/legacy/scrapers/*.json
+/data/sample/data_*/raw/
+/data/sample/data_*/processed/
+/data/sample/data_*/rag/
+
+# Book catalogs and content databases that may contain copyrighted material
+book_catalog.json
+*_catalog.json
+content_database.json
+
+# Configuration files that may contain sensitive data
+config.json
+secrets.json
+credentials.json
+.secrets
+.credentials
+api_keys.txt
+tokens.txt
+
+# User-specific files and personal data
+user_data/
+personal/
+private/
+my_*/
 
 # Backup files
 *.bak

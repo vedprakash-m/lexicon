@@ -78,6 +78,10 @@ Build for production:
 npm run tauri build
 ```
 
+## 📜 License
+
+This project is licensed under the GNU Affero General Public License, version 3 (AGPLv3). See the `LICENSE` file for the full license text.
+
 ### Core Workflows
 
 1. **Project Management**: Create and manage your dataset projects
@@ -170,23 +174,9 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 - **Discussions**: Join community discussions for questions and ideas
 - **Documentation**: Check the docs folder for comprehensive guides
 
-## � License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-### Acknowledgments
-- Built with [Tauri](https://tauri.app/) for native app development
-- UI powered by [React](https://reactjs.org/) and [Tailwind CSS](https://tailwindcss.com/)
-- Backend processing with [Rust](https://www.rust-lang.org/)
-- Text processing with [Python](https://www.python.org/) and advanced NLP libraries
-
 ---
 
 **Lexicon** - Professional RAG Dataset Preparation for macOS  
 *Building the future of AI-ready datasets*
 
-Please ensure compliance with vedabase.io terms of service and respect copyright laws in your jurisdiction.
-
 ---
-
-*Lexicon is developed with reverence for the sacred wisdom of the Vedic tradition and gratitude to all who have preserved and shared this knowledge.*
