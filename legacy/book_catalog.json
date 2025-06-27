@@ -1,0 +1,414 @@
+{
+  "catalog_version": "1.0",
+  "last_updated": "2025-06-26T01:05:23.753130+00:00",
+  "total_books": 10,
+  "books": {
+    "vedic_literature": {
+      "bhagavad_gītā_as_it_is": {
+        "id": "5618e131",
+        "title": "Bhagavad-gītā As It Is",
+        "author": "A.C. Bhaktivedanta Swami Prabhupāda",
+        "category": "vedic_literature",
+        "status": "completed",
+        "source_type": "web_scraping",
+        "priority": "high",
+        "language": "english",
+        "source_url": "https://vedabase.io/en/library/bg/",
+        "estimated_pages": 800,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.751514+00:00",
+        "last_updated": "2025-06-26T01:05:23.751716+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751689+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "ingestion": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751706+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "chunking": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751714+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          }
+        },
+        "metadata": {}
+      },
+      "śrīmad_bhāgavatam": {
+        "id": "3005eddd",
+        "title": "Śrīmad-Bhāgavatam",
+        "author": "A.C. Bhaktivedanta Swami Prabhupāda",
+        "category": "vedic_literature",
+        "status": "completed",
+        "source_type": "web_scraping",
+        "priority": "high",
+        "language": "english",
+        "source_url": "https://vedabase.io/en/library/sb/",
+        "estimated_pages": 15000,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.751736+00:00",
+        "last_updated": "2025-06-26T01:05:23.751948+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751927+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "ingestion": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751941+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "chunking": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.751946+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          }
+        },
+        "metadata": {}
+      },
+      "śrī_īśopaniṣad": {
+        "id": "5e4dbe51",
+        "title": "Śrī Īśopaniṣad",
+        "author": "A.C. Bhaktivedanta Swami Prabhupāda",
+        "category": "vedic_literature",
+        "status": "completed",
+        "source_type": "web_scraping",
+        "priority": "high",
+        "language": "english",
+        "source_url": "https://vedabase.io/en/library/iso/",
+        "estimated_pages": 200,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.751966+00:00",
+        "last_updated": "2025-06-26T01:05:23.752089+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752075+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "ingestion": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752083+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          },
+          "chunking": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752088+00:00",
+            "error_message": null,
+            "quality_score": 0.95
+          }
+        },
+        "metadata": {}
+      },
+      "the_bhagavad_gita_(eknath_easwaran)": {
+        "id": "c9ed6075",
+        "title": "The Bhagavad Gita (Eknath Easwaran)",
+        "author": "Eknath Easwaran",
+        "category": "vedic_literature",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "medium",
+        "language": "english",
+        "source_url": null,
+        "estimated_pages": 400,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752399+00:00",
+        "last_updated": "2025-06-26T01:05:23.752413+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752399+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      }
+    },
+    "spiritual_classics": {
+      "autobiography_of_a_yogi": {
+        "id": "d4d11b3e",
+        "title": "Autobiography of a Yogi",
+        "author": "Paramahansa Yogananda",
+        "category": "spiritual_classics",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "high",
+        "language": "english",
+        "source_url": "https://archive.org/details/AutobiographyOfAYogi",
+        "estimated_pages": 500,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752099+00:00",
+        "last_updated": "2025-06-26T01:05:23.752101+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752099+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      },
+      "the_power_of_now": {
+        "id": "6b8afa0d",
+        "title": "The Power of Now",
+        "author": "Eckhart Tolle",
+        "category": "spiritual_classics",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "high",
+        "language": "english",
+        "source_url": null,
+        "estimated_pages": 300,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752191+00:00",
+        "last_updated": "2025-06-26T01:05:23.752194+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752191+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      },
+      "be_here_now": {
+        "id": "b94c10b7",
+        "title": "Be Here Now",
+        "author": "Ram Dass",
+        "category": "spiritual_classics",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "high",
+        "language": "english",
+        "source_url": null,
+        "estimated_pages": 400,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752895+00:00",
+        "last_updated": "2025-06-26T01:05:23.752901+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752895+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      }
+    },
+    "philosophy": {
+      "meditations": {
+        "id": "c4e68c62",
+        "title": "Meditations",
+        "author": "Marcus Aurelius",
+        "category": "philosophy",
+        "status": "todo",
+        "source_type": "epub",
+        "priority": "medium",
+        "language": "english",
+        "source_url": "https://www.gutenberg.org/ebooks/2680",
+        "estimated_pages": 250,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752273+00:00",
+        "last_updated": "2025-06-26T01:05:23.752276+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752273+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      }
+    },
+    "ai_ml_books": {
+      "hands_on_machine_learning": {
+        "id": "37a54f6b",
+        "title": "Hands-On Machine Learning",
+        "author": "Aurélien Géron",
+        "category": "ai_ml_books",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "high",
+        "language": "english",
+        "source_url": null,
+        "estimated_pages": 800,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752608+00:00",
+        "last_updated": "2025-06-26T01:05:23.752617+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752608+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      }
+    },
+    "self_help": {
+      "the_art_of_happiness": {
+        "id": "e89d7672",
+        "title": "The Art of Happiness",
+        "author": "Dalai Lama",
+        "category": "self_help",
+        "status": "todo",
+        "source_type": "pdf",
+        "priority": "medium",
+        "language": "english",
+        "source_url": null,
+        "estimated_pages": 350,
+        "estimated_words": null,
+        "added_date": "2025-06-26T01:05:23.752762+00:00",
+        "last_updated": "2025-06-26T01:05:23.752769+00:00",
+        "stages": {
+          "registry": {
+            "status": "completed",
+            "date": "2025-06-26T01:05:23.752762+00:00",
+            "error_message": null,
+            "quality_score": null
+          },
+          "ingestion": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          },
+          "chunking": {
+            "status": "todo",
+            "date": null,
+            "error_message": null,
+            "quality_score": null
+          }
+        },
+        "metadata": {}
+      }
+    }
+  },
+  "categories": [
+    "vedic_literature",
+    "spiritual_classics",
+    "philosophy",
+    "ai_ml_books",
+    "self_help",
+    "science",
+    "history",
+    "fiction"
+  ],
+  "source_types": [
+    "web_scraping",
+    "pdf",
+    "epub",
+    "mobi",
+    "txt",
+    "api",
+    "manual"
+  ],
+  "status_types": [
+    "todo",
+    "in_progress",
+    "completed",
+    "failed",
+    "on_hold"
+  ],
+  "priority_levels": [
+    "low",
+    "medium",
+    "high",
+    "urgent"
+  ],
+  "processing_stages": [
+    "registry",
+    "ingestion",
+    "chunking"
+  ]
+}

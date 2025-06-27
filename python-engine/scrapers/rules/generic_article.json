@@ -1,0 +1,88 @@
+{
+  "name": "generic_article",
+  "description": "Generic rule for extracting article content from websites",
+  "domain_patterns": [
+    ".*"
+  ],
+  "selectors": {
+    "title": {
+      "name": "title",
+      "selector": "h1, .title, .article-title, .post-title",
+      "fallback_selectors": [
+        "title",
+        ".headline",
+        ".entry-title"
+      ],
+      "transform": "clean_whitespace",
+      "required": true,
+      "description": "Article title or main heading"
+    },
+    "content": {
+      "name": "content",
+      "selector": ".content, .article-content, .post-content, .entry-content",
+      "fallback_selectors": [
+        "article",
+        ".main-content",
+        "#content",
+        "main"
+      ],
+      "multiple": false,
+      "transform": "clean_whitespace",
+      "required": true,
+      "description": "Main article content"
+    },
+    "author": {
+      "name": "author",
+      "selector": ".author, .by-author, .article-author",
+      "fallback_selectors": [
+        "[rel='author']",
+        ".byline",
+        ".writer"
+      ],
+      "transform": "clean_whitespace",
+      "required": false,
+      "description": "Article author"
+    },
+    "date": {
+      "name": "date",
+      "selector": ".date, .publish-date, .article-date, time",
+      "fallback_selectors": [
+        "[datetime]",
+        ".timestamp",
+        ".published"
+      ],
+      "attribute": "datetime",
+      "required": false,
+      "description": "Publication date"
+    },
+    "tags": {
+      "name": "tags",
+      "selector": ".tags a, .tag, .category",
+      "fallback_selectors": [
+        ".keywords",
+        ".topics"
+      ],
+      "multiple": true,
+      "transform": "clean_whitespace",
+      "required": false,
+      "description": "Article tags or categories"
+    }
+  },
+  "preprocessing": [
+    "remove_navigation",
+    "remove_advertisements",
+    "remove_sidebars"
+  ],
+  "postprocessing": [
+    "validate_content_length",
+    "extract_metadata"
+  ],
+  "metadata": {
+    "content_type": "article",
+    "language": "english",
+    "purpose": "generic_extraction"
+  },
+  "version": "1.0",
+  "author": "Lexicon Development Team",
+  "created_date": "2025-01-26"
+}

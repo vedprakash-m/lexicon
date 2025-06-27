@@ -1,0 +1,88 @@
+name: vedabase_srimad_bhagavatam
+description: Extract Srimad Bhagavatam verse content from Vedabase.io/com
+domain_patterns:
+  - vedabase\.(io|com)/en/library/sb
+  - vedabase\.(io|com)/.*?/sb
+
+selectors:
+  canto_chapter_verse:
+    name: canto_chapter_verse
+    selector: .r-verse-number, .verse-number, h1.verse-title
+    fallback_selectors:
+      - h1
+      - .title
+      - .verse-header
+    transform: clean_whitespace
+    required: true
+    description: Canto.Chapter.Verse reference (e.g., SB 1.1.1)
+
+  sanskrit_text:
+    name: sanskrit_text
+    selector: .r-verse-text, .verse-text, .sanskrit, .devanagari
+    fallback_selectors:
+      - .verse-content .sanskrit
+      - "[lang='sa']"
+      - .original-text
+    transform: clean_whitespace
+    required: true
+    description: Sanskrit verse text in Devanagari script
+
+  transliteration:
+    name: transliteration
+    selector: .r-transliteration, .transliteration, .iast
+    fallback_selectors:
+      - .verse-transliteration
+      - .romanized
+    transform: clean_whitespace
+    required: false
+    description: Romanized Sanskrit transliteration
+
+  translation:
+    name: translation
+    selector: .r-translation, .translation, .english-translation
+    fallback_selectors:
+      - .verse-translation
+      - .meaning
+    transform: clean_whitespace
+    required: true
+    description: English translation of the verse
+
+  synonyms:
+    name: synonyms
+    selector: .r-synonyms, .synonyms, .word-meanings
+    fallback_selectors:
+      - .verse-synonyms
+      - .word-for-word
+    transform: clean_whitespace
+    required: false
+    description: Word-for-word synonyms and meanings
+
+  purport:
+    name: purport
+    selector: .r-purport, .purport, .commentary
+    fallback_selectors:
+      - .verse-purport
+      - .explanation
+      - .commentary-text
+    transform: clean_whitespace
+    required: false
+    description: Purport or commentary on the verse
+
+preprocessing:
+  - remove_navigation
+  - remove_advertisements
+
+postprocessing:
+  - validate_sanskrit
+  - check_completeness
+
+metadata:
+  content_type: spiritual_text
+  scripture: srimad_bhagavatam
+  language: multilingual
+  source: vedabase
+  quality_level: high
+
+version: "1.0"
+author: Lexicon Development Team
+created_date: "2025-01-26"

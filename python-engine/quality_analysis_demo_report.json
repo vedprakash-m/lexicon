@@ -1,0 +1,173 @@
+{
+  "summary": {
+    "total_documents": 5,
+    "average_quality_score": 0.787146997916817,
+    "quality_score_std": 0.11303072399723271,
+    "total_anomalies": 8,
+    "critical_issues": 0,
+    "average_completeness": 0.6673458953556732,
+    "documents_with_issues": 5,
+    "quality_grade": "C"
+  },
+  "metrics_analysis": {
+    "character_count": {
+      "mean": 491.6,
+      "median": 487,
+      "std": 303.4061634179504,
+      "min": 20,
+      "max": 760,
+      "count": 5
+    },
+    "word_count": {
+      "mean": 51.8,
+      "median": 50,
+      "std": 34.95997711669732,
+      "min": 3,
+      "max": 90,
+      "count": 5
+    },
+    "sentence_count": {
+      "mean": 3.8,
+      "median": 4,
+      "std": 1.9235384061671346,
+      "min": 1,
+      "max": 6,
+      "count": 5
+    },
+    "paragraph_count": {
+      "mean": 1,
+      "median": 1,
+      "std": 0.0,
+      "min": 1,
+      "max": 1,
+      "count": 5
+    },
+    "language_confidence": {
+      "mean": 0.9142823601384593,
+      "median": 0.9999964531548675,
+      "std": 0.19166275799125818,
+      "min": 0.5714255956429803,
+      "max": 0.9999978052805318,
+      "count": 5
+    },
+    "encoding_issues": {
+      "mean": 0,
+      "median": 0,
+      "std": 0.0,
+      "min": 0,
+      "max": 0,
+      "count": 5
+    },
+    "readability_score": {
+      "mean": 0.7584706349206349,
+      "median": 0.7497023809523811,
+      "std": 0.19196993145383084,
+      "min": 0.4857142857142857,
+      "max": 0.9501587301587302,
+      "count": 5
+    },
+    "content_density": {
+      "mean": 0.992964956246662,
+      "median": 1.0,
+      "std": 0.014648987879091259,
+      "min": 0.966804979253112,
+      "max": 1.0,
+      "count": 5
+    },
+    "repetition_score": {
+      "mean": 0.17855555555555555,
+      "median": 0.2222222222222222,
+      "std": 0.1123676175838995,
+      "min": 0.0,
+      "max": 0.275,
+      "count": 5
+    },
+    "sanskrit_verse_count": {
+      "mean": 0,
+      "median": 0,
+      "std": 0.0,
+      "min": 0,
+      "max": 0,
+      "count": 5
+    },
+    "transliteration_count": {
+      "mean": 0.2,
+      "median": 0,
+      "std": 0.4472135954999579,
+      "min": 0,
+      "max": 1,
+      "count": 5
+    },
+    "has_structured_content": {
+      "mean": 0,
+      "median": false,
+      "std": 0.0,
+      "min": false,
+      "max": false,
+      "count": 5
+    },
+    "html_artifacts": {
+      "mean": 0,
+      "median": 0,
+      "std": 0.0,
+      "min": 0,
+      "max": 0,
+      "count": 5
+    },
+    "formatting_artifacts": {
+      "mean": 0,
+      "median": 0,
+      "std": 0.0,
+      "min": 0,
+      "max": 0,
+      "count": 5
+    },
+    "noise_level": {
+      "mean": 0.41083554862355104,
+      "median": 0.35526315789473684,
+      "std": 0.36306378023501745,
+      "min": 0.0,
+      "max": 1.0,
+      "count": 5
+    }
+  },
+  "anomaly_analysis": {
+    "total_reports": 5,
+    "reports_with_anomalies": 5,
+    "issue_types": {},
+    "severity_distribution": {
+      "low": 0,
+      "medium": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "most_common_issues": []
+  },
+  "completeness_analysis": {
+    "average_completeness": 0.6673458953556732,
+    "completeness_std": 0.2171244377430556,
+    "average_percentage": 66.2,
+    "documents_fully_complete": 0,
+    "most_missing_sections": [
+      [
+        "Introduction",
+        2
+      ],
+      [
+        "Conclusion",
+        1
+      ]
+    ],
+    "structural_completeness": {
+      "has_title": 4,
+      "has_content": 5,
+      "has_conclusion": 1
+    }
+  },
+  "recommendations": [
+    "Consider improving text cleaning to reduce noise levels",
+    "Improve document completeness by ensuring all required sections are present"
+  ],
+  "trends": {},
+  "timestamp": "2025-06-26T14:29:35.296927"
+}

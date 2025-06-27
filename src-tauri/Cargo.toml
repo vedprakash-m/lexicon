@@ -1,0 +1,79 @@
+[package]
+name = "lexicon"
+version = "1.0.0"
+description = "Personal RAG Dataset Preparation Tool"
+authors = ["Lexicon Development Team"]
+license = "MIT"
+repository = "https://github.com/lexicon/lexicon"
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "lexicon_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.3.0", features = [] }
+
+[dependencies]
+# Core Tauri
+tauri = { version = "2.6.0", features = ["macos-private-api"] }
+tauri-plugin-updater = { version = "2.0", optional = true }
+tauri-plugin-notification = { version = "2.0", optional = true }
+tauri-plugin-fs = { version = "2.0", optional = true }
+tauri-plugin-dialog = { version = "2.0", optional = true }
+tauri-plugin-shell = { version = "2.0", optional = true }
+tauri-plugin-log = "2.0"
+
+# HTTP and JSON
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+base64 = "0.22"
+url = "2.5"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+futures = "0.3"
+
+# Logging and error handling
+log = "0.4"
+env_logger = "0.11"
+thiserror = "1.0"
+anyhow = "1.0"
+
+# File system and paths
+dirs = "5.0"
+walkdir = "2.5"
+glob = "0.3"
+fs2 = "0.4"
+
+# Date and time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.8", features = ["v4", "serde"] }
+
+# Text processing and chunking
+regex = "1.10"
+unicode-segmentation = "1.11"
+rayon = "1.8"
+
+# Configuration management
+config = "0.14"
+toml = "0.8"
+
+# Process management for Python integration
+subprocess = "0.2"
+which = "6.0"
+
+# macOS specific integrations
+[target.'cfg(target_os = "macos")'.dependencies]
+cocoa = "0.25"
+objc = "0.2"
+core-foundation = "0.9"
