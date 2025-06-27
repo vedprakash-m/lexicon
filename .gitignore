@@ -155,10 +155,12 @@ tmp/
 *.jsonl
 *.parquet
 /legacy/data/
-/legacy/scrapers/*.json
-/data/sample/data_*/raw/
-/data/sample/data_*/processed/
-/data/sample/data_*/rag/
+
+# Large dataset files
+*.txt
+!README*.txt
+!requirements.txt
+!LICENSE.txt
 
 # Book catalogs and content databases that may contain copyrighted material
 book_catalog.json
