@@ -135,6 +135,9 @@ export interface StateActions {
   updateSettings: (updates: Partial<AppSettings>) => void;
   resetSettings: () => void;
 
+  // Store reset
+  reset: () => void;
+
   // Undo/Redo actions
   undo: () => void;
   redo: () => void;
@@ -152,6 +155,11 @@ export interface StateActions {
   setActiveSourceText: (id: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
+  clearError: () => void;
+
+  // Getter methods
+  getActiveSourceText: () => SourceText | null;
+  getActiveDataset: () => Dataset | null;
 }
 
 // Main application state

@@ -1,18 +1,23 @@
-# Lexicon
+# Lexicon- **🌍 Universal Content Support**: Process technical docs, academic papers, business content, literature, legal texts, medical content, educational materials, web content, and religious texts
+- **🐍 Advanced Processing**: Python engine with intelligent content recognition and processing capabilities
+- **🔧 Modular Architecture**: Extensible system supporting any text content source and format
+- **🔒 Privacy-First**: All processing happens locally - your content never leaves your machine
+- **⚡ High Performance**: Rust backend ensures fast, memory-efficient operations for large content collections
+- **📊 Multiple Export Formats**: Support for JSON, JSONL, Parquet, and Markdown outputs optimized for any content analysis
+- **🧠 Intelligent Chunking**: Advanced text segmentation strategies preserving document structure and content formattingniversal RAG Dataset Preparation Tool for Any Text Content**
 
-> **Professional RAG Dataset Preparation Tool for macOS**
-
-Lexicon is a native macOS application designed for developers, researchers, and data scientists who need high-quality RAG (Retrieval-Augmented Generation) datasets. Built with modern technologies, Lexicon provides a comprehensive solution for web scraping, text processing, metadata enrichment, and dataset export.
+Lexicon is a native macOS application designed for developers, researchers, content creators, analysts, and professionals who need high-quality RAG (Retrieval-Augmented Generation) datasets from any text content. Built with modern technologies, Lexicon provides a comprehensive solution for processing technical documentation, academic papers, business documents, literature, legal texts, medical content, educational materials, web content, religious texts, and any structured text.
 
 ## ✨ Key Features
 
 - **🖥️ Native macOS App**: Built with Tauri + React for optimal performance and user experience
-- **🐍 Advanced Processing**: Python engine with state-of-the-art text processing libraries
-- **🔧 Modular Architecture**: Extensible system supporting multiple content sources and formats
-- **🔒 Privacy-First**: All processing happens locally - your data never leaves your machine
-- **⚡ High Performance**: Rust backend ensures fast, memory-efficient operations
-- **📊 Multiple Export Formats**: Support for JSON, JSONL, Parquet, and Markdown outputs
-- **🧠 Intelligent Chunking**: Advanced text segmentation strategies optimized for RAG applications
+- **� Universal Scripture Support**: Process Bible, Quran, Torah, Buddhist texts, Hindu scriptures, and classical philosophy
+- **�🐍 Advanced Processing**: Python engine with specialized structured scripture processing capabilities
+- **🔧 Modular Architecture**: Extensible system supporting multiple religious and classical text sources
+- **🔒 Privacy-First**: All processing happens locally - your sacred texts never leave your machine
+- **⚡ High Performance**: Rust backend ensures fast, memory-efficient operations for large religious text collections
+- **📊 Multiple Export Formats**: Support for JSON, JSONL, Parquet, and Markdown outputs optimized for religious text analysis
+- **🧠 Intelligent Chunking**: Advanced text segmentation strategies preserving verse structure and religious text formatting
 
 ## 🏗️ Architecture
 
@@ -84,12 +89,12 @@ This project is licensed under the GNU Affero General Public License, version 3 
 
 ### Core Workflows
 
-1. **Project Management**: Create and manage your dataset projects
-2. **Source Configuration**: Set up web scraping sources and rules  
-3. **Content Scraping**: Execute scraping jobs with progress monitoring
-4. **Batch Processing**: Process large volumes of content efficiently
-5. **Advanced Chunking**: Apply sophisticated text segmentation strategies
-6. **Export & Deploy**: Export datasets in multiple formats for your RAG applications
+1. **Project Management**: Create and manage your religious or classical text dataset projects
+2. **Source Configuration**: Set up web scraping sources and rules for religious websites and archives
+3. **Content Scraping**: Execute scraping jobs with progress monitoring for large religious text collections
+4. **Batch Processing**: Process large volumes of religious and classical texts efficiently
+5. **Advanced Chunking**: Apply sophisticated text segmentation strategies preserving religious text structure
+6. **Export & Deploy**: Export datasets in multiple formats optimized for religious text analysis and RAG applications
 
 ## 📁 Project Structure
 
@@ -116,17 +121,19 @@ lexicon/
 - **Testing Ready**: Vitest setup for unit testing and quality assurance
 - **Documentation**: Storybook integration for component development
 
-### For Researchers
-- **High-Quality Data**: Advanced text processing ensures clean, accurate datasets
-- **Flexible Export**: Multiple formats support various research workflows
-- **Reproducible Results**: Deterministic processing ensures consistent outputs
-- **Extensible Framework**: Easy to add new content sources and processing rules
+### For Religious Scholars & Researchers
+- **Universal Text Support**: Process texts from Christianity, Islam, Judaism, Buddhism, Hinduism, and classical philosophy
+- **Verse-Aware Processing**: Intelligent handling of religious text structure including verses, chapters, and sections
+- **High-Quality Data**: Advanced text processing ensures clean, accurate datasets preserving religious formatting
+- **Flexible Export**: Multiple formats support various research workflows and religious studies applications
+- **Reproducible Results**: Deterministic processing ensures consistent outputs for academic research
+- **Extensible Framework**: Easy to add new religious text sources and processing rules
 
 ### For Data Scientists
-- **RAG-Optimized**: Purpose-built for Retrieval-Augmented Generation applications
-- **Semantic Chunking**: Intelligent text segmentation preserves meaning and context
+- **RAG-Optimized**: Purpose-built for Retrieval-Augmented Generation applications with religious and classical texts
+- **Semantic Chunking**: Intelligent text segmentation preserves meaning and religious context
 - **Quality Metrics**: Built-in analytics for dataset quality assessment
-- **Integration Ready**: Compatible with popular ML frameworks and tools
+- **Integration Ready**: Compatible with popular ML frameworks and tools for religious text analysis
 
 ## 🤝 Contributing
 
@@ -151,9 +158,9 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 ### System Requirements
 - **Operating System**: macOS 10.15 (Catalina) or later
-- **Memory**: 4GB RAM minimum, 8GB recommended
-- **Storage**: 2GB free space for application and data
-- **Network**: Internet connection required for initial setup and content scraping
+- **Memory**: 4GB RAM minimum, 8GB recommended for large religious text collections
+- **Storage**: 2GB free space for application and religious text data
+- **Network**: Internet connection required for initial setup and religious text scraping
 
 ### Development Requirements
 - **Node.js**: 18.x or later
@@ -176,7 +183,7 @@ We welcome contributions from the community! Whether you're fixing bugs, adding 
 
 ---
 
-**Lexicon** - Professional RAG Dataset Preparation for macOS  
-*Building the future of AI-ready datasets*
+**Lexicon** - Universal RAG Dataset Preparation for Religious and Classical Texts  
+*Building the future of AI-ready religious and classical text datasets*
 
 ---

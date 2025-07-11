@@ -1,6 +1,6 @@
 # Technical Specification Document
 
-## Lexicon: Personal RAG Dataset Preparation Tool
+## Lexicon: Universal RAG Dataset Preparation Tool
 
 **Version:** 1.0  
 **Date:** June 25, 2025  
@@ -27,7 +27,8 @@
 - **Local-First**: All processing happens on the user's Mac with no external dependencies
 - **Privacy-Focused**: No data leaves the user's machine without explicit consent
 - **Performance-Optimized**: Native Rust backend with efficient React frontend
-- **Extensible**: Plugin architecture ready for future enhancements
+- **Universal-Compatible**: Intelligent content recognition for any text domain
+- **Extensible**: Plugin architecture ready for future enhancements and content types
 
 ---
 
@@ -2050,7 +2051,7 @@ impl CloudOAuthManager {
 ## 📚 Book Enrichment & Metadata Enhancement Architecture
 
 ### Overview
-The metadata enrichment system transforms basic book information into rich, contextual metadata through web-based APIs and intelligent relationship mapping, particularly valuable for academic and spiritual text collections.
+The metadata enrichment system transforms basic book information into rich, contextual metadata through web-based APIs and intelligent relationship mapping, particularly valuable for academic and structured scripture collections.
 
 ### Architecture Components
 
@@ -2431,9 +2432,9 @@ impl RelationshipAnalyzer {
                 });
             }
             
-            // Check for philosophical/spiritual connections (specialized for Vedic texts)
-            if let Some(spiritual_rel) = self.detect_spiritual_relationship(enriched_book, candidate).await? {
-                relationships.push(spiritual_rel);
+            // Check for philosophical/scripture connections (specialized for various traditions)
+            if let Some(scripture_rel) = self.detect_scripture_relationship(enriched_book, candidate).await? {
+                relationships.push(scripture_rel);
             }
         }
         
@@ -2444,31 +2445,34 @@ impl RelationshipAnalyzer {
         Ok(relationships)
     }
     
-    async fn detect_spiritual_relationship(
+    async fn detect_scripture_relationship(
         &self,
         book1: &EnrichedBook,
         book2: &EnrichedBook,
     ) -> Result<Option<BookRelationship>, AnalysisError> {
-        // Specialized logic for Vedic and spiritual texts
-        let spiritual_keywords = [
+        // Specialized logic for various scripture traditions
+        let scripture_keywords = [
             "bhagavad", "gita", "krishna", "arjuna", "upanishad", "vedanta",
             "bhagavatam", "srimad", "caitanya", "prabhupada", "iskcon",
+            "torah", "talmud", "hebrew", "jewish", "rabbi", "judaism",
+            "quran", "hadith", "islamic", "muslim", "prophet", "allah",
+            "bible", "christian", "gospel", "psalm", "christ", "scripture",
             "yoga", "meditation", "dharma", "karma", "moksha"
         ];
         
-        let book1_spiritual_score = self.calculate_keyword_presence(&book1.title, &spiritual_keywords) +
-                                   self.calculate_keyword_presence(&book1.subjects.join(" "), &spiritual_keywords);
+        let book1_scripture_score = self.calculate_keyword_presence(&book1.title, &scripture_keywords) +
+                                   self.calculate_keyword_presence(&book1.subjects.join(" "), &scripture_keywords);
         
-        let book2_spiritual_score = self.calculate_keyword_presence(&book2.title, &spiritual_keywords) +
-                                   self.calculate_keyword_presence(&book2.subjects.join(" "), &spiritual_keywords);
+        let book2_scripture_score = self.calculate_keyword_presence(&book2.title, &scripture_keywords) +
+                                   self.calculate_keyword_presence(&book2.subjects.join(" "), &scripture_keywords);
         
-        if book1_spiritual_score > 0.3 && book2_spiritual_score > 0.3 {
-            let strength = (book1_spiritual_score + book2_spiritual_score) / 2.0;
+        if book1_scripture_score > 0.3 && book2_scripture_score > 0.3 {
+            let strength = (book1_scripture_score + book2_scripture_score) / 2.0;
             return Ok(Some(BookRelationship {
                 related_book_id: book2.id.clone(),
                 relationship_type: RelationshipType::SamePhilosophy,
                 strength: strength.min(1.0),
-                description: Some("Related spiritual/philosophical teachings".to_string()),
+                description: Some("Related scripture/philosophical teachings".to_string()),
             }));
         }
         
@@ -2611,7 +2615,7 @@ This comprehensive metadata enrichment system provides:
 1. **Rich Metadata Collection**: ISBN lookup, author information, ratings, categories
 2. **Visual Asset Management**: Cover images, author photos with optimization and caching
 3. **Relationship Analysis**: Detects similar books, translations, same author relationships
-4. **Specialized Spiritual Text Support**: Enhanced relationship detection for Vedic texts
+4. **Specialized Scripture Text Support**: Enhanced relationship detection for various scripture traditions
 5. **Performance Optimization**: Rate limiting, caching, and efficient data structures
 6. **Enhanced UI Components**: Rich visual book cards with metadata display
 

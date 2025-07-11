@@ -1,0 +1,8 @@
+{
+  "relationships": [
+    {
+      "type": "same_author",
+      "confidence": 0.95
+    }
+  ]
+}

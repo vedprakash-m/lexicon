@@ -149,12 +149,12 @@
         "metadata": {}
       }
     },
-    "spiritual_classics": {
+    "structured_scriptures": {
       "autobiography_of_a_yogi": {
         "id": "d4d11b3e",
         "title": "Autobiography of a Yogi",
         "author": "Paramahansa Yogananda",
-        "category": "spiritual_classics",
+        "category": "structured_scriptures",
         "status": "todo",
         "source_type": "pdf",
         "priority": "high",
@@ -190,7 +190,7 @@
         "id": "6b8afa0d",
         "title": "The Power of Now",
         "author": "Eckhart Tolle",
-        "category": "spiritual_classics",
+        "category": "structured_scriptures",
         "status": "todo",
         "source_type": "pdf",
         "priority": "high",
@@ -226,7 +226,7 @@
         "id": "b94c10b7",
         "title": "Be Here Now",
         "author": "Ram Dass",
-        "category": "spiritual_classics",
+        "category": "structured_scriptures",
         "status": "todo",
         "source_type": "pdf",
         "priority": "high",
@@ -376,7 +376,7 @@
   },
   "categories": [
     "vedic_literature",
-    "spiritual_classics",
+    "structured_scriptures",
     "philosophy",
     "ai_ml_books",
     "self_help",

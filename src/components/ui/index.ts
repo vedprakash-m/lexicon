@@ -65,3 +65,29 @@ export type { SpinnerProps } from './spinner';
 // Theme Components
 export { ThemeProvider, useTheme } from './theme-provider';
 export { ThemeToggle } from './theme-toggle';
+
+// Advanced UI Components
+export { 
+  Tooltip, 
+  TooltipTrigger, 
+  TooltipContent, 
+  TooltipProvider,
+  TooltipWithShortcut,
+  QuickTooltip 
+} from './tooltip';
+
+export { 
+  KeyboardShortcutsProvider, 
+  useShortcut, 
+  useKeyboardShortcuts,
+  formatShortcut,
+  KeyboardShortcutsHelp,
+  KeyboardShortcut 
+} from './keyboard-shortcuts';
+
+export { CommandPalette } from './command-palette';
+export { HelpSystem } from './help-system';
+export { SimpleHelpSystem, SimpleHelpButton } from './simple-help-system';
+
+// Accessibility components
+export * from '../accessibility';

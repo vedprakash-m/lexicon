@@ -308,48 +308,30 @@ class RelationshipTracker:
                         self.relationships.append(relationship)
     
     def _find_referenced_chunks(self, reference_text: str, chunks: List[Chunk]) -> List[Chunk]:
-        """Find chunks that match a reference."""
+        """Find chunks that match a reference text."""
         referenced_chunks = []
         reference_lower = reference_text.lower()
         
         for chunk in chunks:
-            # Check if reference appears in chunk metadata or content
-            if (reference_lower in chunk.text.lower() or
+            # Check if chunk contains the reference
+            if (reference_lower in chunk.text.lower() or 
                 reference_lower in chunk.section_title.lower() or
-                any(reference_lower in str(v).lower() for v in chunk.metadata.values())):
+                reference_lower in chunk.metadata.get('title', '').lower()):
                 referenced_chunks.append(chunk)
         
         return referenced_chunks
+    
+    def get_relationships(self) -> List[ChunkRelationship]:
+        """Get all tracked relationships."""
+        return self.relationships
     
     def get_relationships_for_chunk(self, chunk_id: str) -> List[ChunkRelationship]:
         """Get all relationships for a specific chunk."""
         return [rel for rel in self.relationships 
                 if rel.source_chunk_id == chunk_id or rel.target_chunk_id == chunk_id]
-    
-    def get_relationship_graph(self) -> Dict[str, Any]:
-        """Get relationship data in graph format."""
-        nodes = set()
-        edges = []
-        
-        for rel in self.relationships:
-            nodes.add(rel.source_chunk_id)
-            nodes.add(rel.target_chunk_id)
-            
-            edges.append({
-                'source': rel.source_chunk_id,
-                'target': rel.target_chunk_id,
-                'type': rel.relationship_type,
-                'strength': rel.strength,
-                'metadata': rel.metadata
-            })
-        
-        return {
-            'nodes': [{'id': node_id} for node_id in nodes],
-            'edges': edges
-        }
 
 
-class AdvancedMetadataExtractor:
+class MetadataExtractor:
     """Extracts advanced metadata from chunks."""
     
     def __init__(self, config: AdvancedChunkingConfig):
@@ -367,682 +349,779 @@ class AdvancedMetadataExtractor:
         metadata = {}
         
         if self.config.extract_entities:
-            metadata['entities'] = self._extract_entities(chunk.text)
+            metadata.update(self._extract_entities(chunk))
         
         if self.config.extract_keywords:
-            metadata['keywords'] = self._extract_keywords(chunk.text)
+            metadata.update(self._extract_keywords(chunk))
         
         if self.config.extract_topics:
-            metadata['topics'] = self._extract_topics(chunk.text)
+            metadata.update(self._extract_topics(chunk))
         
-        # Basic linguistic features
-        metadata['linguistic_features'] = self._extract_linguistic_features(chunk.text)
+        if self.config.extract_summaries:
+            metadata.update(self._extract_summary(chunk))
         
-        # Content analysis
-        metadata['content_analysis'] = self._analyze_content(chunk.text)
+        # Always extract basic metrics
+        metadata.update(self._extract_basic_metrics(chunk))
         
         return metadata
     
-    def _extract_entities(self, text: str) -> List[Dict[str, Any]]:
-        """Extract named entities from text."""
+    def _extract_entities(self, chunk: Chunk) -> Dict[str, Any]:
+        """Extract named entities from chunk."""
         if not self.nlp:
-            return []
+            return {}
         
-        doc = self.nlp(text)
-        entities = []
+        doc = self.nlp(chunk.text)
+        entities = {}
         
         for ent in doc.ents:
-            entities.append({
+            label = ent.label_
+            if label not in entities:
+                entities[label] = []
+            entities[label].append({
                 'text': ent.text,
-                'label': ent.label_,
-                'description': spacy.explain(ent.label_),
-                'start_char': ent.start_char,
-                'end_char': ent.end_char,
-                'confidence': 1.0  # spaCy doesn't provide confidence scores
+                'start': ent.start_char,
+                'end': ent.end_char,
+                'confidence': float(ent._.get('confidence', 1.0)) if hasattr(ent._, 'confidence') else 1.0
             })
         
-        return entities
+        return {
+            'entities': entities,
+            'entity_count': len(doc.ents),
+            'unique_entities': len(set(ent.text.lower() for ent in doc.ents))
+        }
     
-    def _extract_keywords(self, text: str) -> List[Dict[str, Any]]:
-        """Extract keywords using linguistic analysis."""
+    def _extract_keywords(self, chunk: Chunk) -> Dict[str, Any]:
+        """Extract keywords using frequency analysis."""
         if not self.nlp:
-            return []
+            # Fallback to simple keyword extraction
+            return self._simple_keyword_extraction(chunk)
         
-        doc = self.nlp(text)
+        doc = self.nlp(chunk.text)
+        
+        # Filter tokens (remove stop words, punctuation, etc.)
         keywords = []
-        
-        # Extract significant tokens (nouns, adjectives, proper nouns)
         for token in doc:
-            if (token.pos_ in ['NOUN', 'PROPN', 'ADJ'] and
-                not token.is_stop and
-                not token.is_punct and
-                len(token.text) > 2):
-                
+            if (not token.is_stop and 
+                not token.is_punct and 
+                not token.is_space and 
+                len(token.text) > 2 and
+                token.pos_ in ['NOUN', 'PROPN', 'ADJ', 'VERB']):
                 keywords.append({
-                    'text': token.text,
-                    'lemma': token.lemma_,
+                    'text': token.lemma_.lower(),
                     'pos': token.pos_,
-                    'frequency': text.lower().count(token.text.lower())
+                    'frequency': 1
                 })
         
-        # Sort by frequency and return top keywords
-        keywords.sort(key=lambda x: x['frequency'], reverse=True)
-        return keywords[:10]  # Top 10 keywords
+        # Count frequencies
+        keyword_freq = {}
+        for kw in keywords:
+            text = kw['text']
+            if text in keyword_freq:
+                keyword_freq[text]['frequency'] += 1
+            else:
+                keyword_freq[text] = kw
+        
+        # Sort by frequency
+        sorted_keywords = sorted(keyword_freq.values(), 
+                               key=lambda x: x['frequency'], reverse=True)
+        
+        return {
+            'keywords': sorted_keywords[:20],  # Top 20 keywords
+            'keyword_density': len(keywords) / len(doc) if len(doc) > 0 else 0
+        }
     
-    def _extract_topics(self, text: str) -> List[str]:
-        """Extract topic indicators from text."""
-        # Simple topic extraction based on patterns and keywords
+    def _simple_keyword_extraction(self, chunk: Chunk) -> Dict[str, Any]:
+        """Simple keyword extraction without spaCy."""
+        import string
+        from collections import Counter
+        
+        # Simple stop words list
+        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
+                     'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being',
+                     'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
+                     'should', 'may', 'might', 'must', 'can', 'this', 'that', 'these', 'those'}
+        
+        # Clean and tokenize text
+        text = chunk.text.lower()
+        text = text.translate(str.maketrans('', '', string.punctuation))
+        words = text.split()
+        
+        # Filter words
+        filtered_words = [word for word in words 
+                         if word not in stop_words and len(word) > 2]
+        
+        # Count frequencies
+        word_freq = Counter(filtered_words)
+        
+        keywords = [{'text': word, 'frequency': freq, 'pos': 'UNKNOWN'} 
+                   for word, freq in word_freq.most_common(20)]
+        
+        return {
+            'keywords': keywords,
+            'keyword_density': len(filtered_words) / len(words) if len(words) > 0 else 0
+        }
+    
+    def _extract_topics(self, chunk: Chunk) -> Dict[str, Any]:
+        """Extract topic information from chunk."""
+        # Simple topic detection based on keywords and patterns
         topics = []
         
         # Domain-specific topic patterns
-        spiritual_patterns = {
-            'dharma': r'\b(dharma|duty|righteousness|moral)\b',
-            'karma': r'\b(karma|action|deed|work)\b',
-            'moksha': r'\b(moksha|liberation|salvation|freedom)\b',
-            'meditation': r'\b(meditat\w*|contemplat\w*|concentrat\w*)\b',
-            'philosophy': r'\b(philosoph\w*|wisdom|truth|reality)\b'
+        topic_patterns = {
+            'spiritual': [r'\b(?:god|divine|soul|spirit|meditation|prayer|enlightenment|karma|dharma)\b'],
+            'philosophy': [r'\b(?:wisdom|truth|reality|existence|consciousness|being|knowledge)\b'],
+            'technical': [r'\b(?:algorithm|function|method|implementation|system|process|analysis)\b'],
+            'historical': [r'\b(?:ancient|history|tradition|century|period|era|civilization)\b'],
+            'instructional': [r'\b(?:step|procedure|how to|method|technique|practice|exercise)\b']
         }
         
-        for topic, pattern in spiritual_patterns.items():
-            if re.search(pattern, text, re.IGNORECASE):
-                topics.append(topic)
+        text_lower = chunk.text.lower()
         
-        return topics
+        for topic, patterns in topic_patterns.items():
+            matches = 0
+            for pattern in patterns:
+                matches += len(re.findall(pattern, text_lower))
+            
+            if matches > 0:
+                confidence = min(1.0, matches / 10.0)  # Normalize confidence
+                topics.append({
+                    'topic': topic,
+                    'confidence': confidence,
+                    'match_count': matches
+                })
+        
+        return {
+            'topics': sorted(topics, key=lambda x: x['confidence'], reverse=True),
+            'primary_topic': topics[0]['topic'] if topics else 'general'
+        }
     
-    def _extract_linguistic_features(self, text: str) -> Dict[str, Any]:
-        """Extract linguistic features from text."""
-        features = {
-            'char_count': len(text),
-            'word_count': len(text.split()),
-            'sentence_count': len(re.findall(r'[.!?]+', text)),
-            'paragraph_count': len(text.split('\n\n')),
-            'avg_word_length': sum(len(word) for word in text.split()) / len(text.split()) if text.split() else 0
-        }
+    def _extract_summary(self, chunk: Chunk) -> Dict[str, Any]:
+        """Extract or generate a summary of the chunk."""
+        text = chunk.text.strip()
         
-        # Calculate readability metrics
-        words = text.split()
+        # Simple extractive summary: first and last sentences
         sentences = re.split(r'[.!?]+', text)
+        sentences = [s.strip() for s in sentences if s.strip()]
         
-        if len(sentences) > 0 and len(words) > 0:
-            avg_sentence_length = len(words) / len(sentences)
-            features['avg_sentence_length'] = avg_sentence_length
+        if len(sentences) <= 2:
+            summary = text[:200] + "..." if len(text) > 200 else text
+        else:
+            summary = sentences[0] + " ... " + sentences[-1]
         
-        return features
-    
-    def _analyze_content(self, text: str) -> Dict[str, Any]:
-        """Analyze content characteristics."""
-        analysis = {
-            'has_questions': bool(re.search(r'\?', text)),
-            'has_quotations': bool(re.search(r'["\']', text)),
-            'has_numbers': bool(re.search(r'\d+', text)),
-            'has_references': bool(re.search(r'\(see|cf\.|refer to', text, re.IGNORECASE)),
-            'is_dialogue': bool(re.search(r'["\'].*["\']', text)),
-            'complexity_score': self._calculate_complexity(text)
+        return {
+            'summary': summary,
+            'sentence_count': len(sentences),
+            'avg_sentence_length': sum(len(s) for s in sentences) / len(sentences) if sentences else 0
         }
-        
-        return analysis
     
-    def _calculate_complexity(self, text: str) -> float:
-        """Calculate text complexity score."""
-        # Simple complexity score based on various factors
+    def _extract_basic_metrics(self, chunk: Chunk) -> Dict[str, Any]:
+        """Extract basic text metrics."""
+        text = chunk.text
+        
+        # Character counts
+        char_count = len(text)
+        char_count_no_spaces = len(text.replace(' ', ''))
+        
+        # Word counts
+        words = text.split()
+        word_count = len(words)
+        unique_words = len(set(word.lower() for word in words))
+        
+        # Sentence counts
+        sentences = re.split(r'[.!?]+', text)
+        sentence_count = len([s for s in sentences if s.strip()])
+        
+        # Paragraph counts
+        paragraphs = [p for p in text.split('\n\n') if p.strip()]
+        paragraph_count = len(paragraphs)
+        
+        # Readability metrics
+        avg_words_per_sentence = word_count / sentence_count if sentence_count > 0 else 0
+        avg_chars_per_word = char_count_no_spaces / word_count if word_count > 0 else 0
+        
+        # Complexity metrics
+        complexity_score = self._calculate_complexity_score(text)
+        
+        return {
+            'char_count': char_count,
+            'char_count_no_spaces': char_count_no_spaces,
+            'word_count': word_count,
+            'unique_words': unique_words,
+            'sentence_count': sentence_count,
+            'paragraph_count': paragraph_count,
+            'avg_words_per_sentence': round(avg_words_per_sentence, 2),
+            'avg_chars_per_word': round(avg_chars_per_word, 2),
+            'lexical_diversity': round(unique_words / word_count, 3) if word_count > 0 else 0,
+            'complexity_score': complexity_score
+        }
+    
+    def _calculate_complexity_score(self, text: str) -> float:
+        """Calculate text complexity score (0.0 to 1.0)."""
         words = text.split()
         if not words:
             return 0.0
         
         # Factors that increase complexity
-        avg_word_length = sum(len(word) for word in words) / len(words)
-        unique_words = len(set(word.lower() for word in words))
-        vocabulary_diversity = unique_words / len(words)
+        long_words = sum(1 for word in words if len(word) > 6)
+        long_word_ratio = long_words / len(words)
         
-        # Normalize and combine factors
+        # Average word length
+        avg_word_length = sum(len(word) for word in words) / len(words)
+        
+        # Sentence complexity (based on punctuation)
+        complex_punctuation = len(re.findall(r'[;:()[\]{}"]', text))
+        
+        # Combine factors
         complexity = (
-            (avg_word_length / 10.0) * 0.3 +  # Word length factor
-            vocabulary_diversity * 0.4 +       # Vocabulary diversity
-            min(1.0, len(words) / 100.0) * 0.3 # Length factor
+            long_word_ratio * 0.4 +
+            min(avg_word_length / 10, 1.0) * 0.3 +
+            min(complex_punctuation / len(words), 1.0) * 0.3
         )
         
-        return min(1.0, complexity)
+        return min(complexity, 1.0)
 
 
-class OverlapManager:
-    """Manages intelligent overlap between chunks."""
+class AdvancedChunkingEngine:
+    """Advanced chunking engine with custom rules and metadata extraction."""
     
     def __init__(self, config: AdvancedChunkingConfig):
         self.config = config
-    
-    def optimize_overlaps(self, chunks: List[Chunk]) -> List[Chunk]:
-        """Optimize overlaps between chunks for better coherence."""
-        if not self.config.intelligent_overlap:
-            return chunks
-        
-        optimized_chunks = []
-        
-        for i, chunk in enumerate(chunks):
-            optimized_chunk = Chunk(
-                text=chunk.text,
-                start_char=chunk.start_char,
-                end_char=chunk.end_char,
-                chunk_id=chunk.chunk_id,
-                chunk_type=chunk.chunk_type,
-                section_title=chunk.section_title,
-                metadata=chunk.metadata.copy(),
-                quality_score=chunk.quality_score
-            )
-            
-            # Calculate optimal overlap with next chunk
-            if i < len(chunks) - 1:
-                next_chunk = chunks[i + 1]
-                optimal_overlap = self._calculate_optimal_overlap(chunk, next_chunk)
-                optimized_chunk.overlap_with_next = optimal_overlap
-            
-            # Calculate optimal overlap with previous chunk
-            if i > 0:
-                prev_chunk = chunks[i - 1]
-                optimal_overlap = self._calculate_optimal_overlap(prev_chunk, chunk)
-                optimized_chunk.overlap_with_previous = optimal_overlap
-            
-            optimized_chunks.append(optimized_chunk)
-        
-        return optimized_chunks
-    
-    def _calculate_optimal_overlap(self, chunk1: Chunk, chunk2: Chunk) -> int:
-        """Calculate optimal overlap size between two chunks."""
-        if self.config.overlap_optimization == "fixed":
-            return self.config.overlap_size
-        
-        # Content-aware overlap calculation
-        text1 = chunk1.text
-        text2 = chunk2.text
-        
-        # Find natural break points near the boundary
-        boundary_area = text1[-200:] + text2[:200]  # 400 chars around boundary
-        
-        # Look for sentence boundaries
-        sentence_breaks = [m.end() for m in re.finditer(r'[.!?]\s+', boundary_area)]
-        
-        if sentence_breaks:
-            # Use the sentence break closest to the middle
-            middle = len(boundary_area) // 2
-            best_break = min(sentence_breaks, key=lambda x: abs(x - middle))
-            
-            # Calculate overlap based on sentence boundary
-            overlap_size = max(
-                int(len(text1) * self.config.overlap_min_ratio),
-                min(
-                    int(len(text1) * self.config.overlap_max_ratio),
-                    200 - best_break if best_break < 200 else best_break - 200
-                )
-            )
-        else:
-            # Fallback to paragraph or word boundaries
-            word_breaks = [m.end() for m in re.finditer(r'\s+', boundary_area)]
-            if word_breaks:
-                middle = len(boundary_area) // 2
-                best_break = min(word_breaks, key=lambda x: abs(x - middle))
-                overlap_size = max(
-                    int(len(text1) * self.config.overlap_min_ratio),
-                    min(
-                        int(len(text1) * self.config.overlap_max_ratio),
-                        200 - best_break if best_break < 200 else best_break - 200
-                    )
-                )
-            else:
-                # Use configured overlap size
-                overlap_size = self.config.overlap_size
-        
-        return max(0, overlap_size)
-
-
-class CustomRuleChunker(ChunkingStrategy):
-    """Chunking strategy that applies custom rules."""
-    
-    def __init__(self, config: AdvancedChunkingConfig):
-        super().__init__(config)
-        self.config = config
-    
-    def chunk_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Chunk]:
-        """Chunk text using custom rules."""
-        if not self.config.apply_custom_rules or not self.config.custom_rules:
-            # Fallback to fixed-size chunking
-            from chunking_strategies import FixedSizeChunker
-            fallback_chunker = FixedSizeChunker(self.config)
-            return fallback_chunker.chunk_text(text, metadata)
-        
-        # Apply custom rules to find chunk boundaries
-        boundaries = self._find_custom_boundaries(text)
-        
-        # Create chunks based on boundaries
-        chunks = []
-        start = 0
-        
-        for i, boundary in enumerate(boundaries):
-            end = boundary['position']
-            
-            if end > start:
-                chunk_text = text[start:end].strip()
-                if chunk_text:
-                    chunk = Chunk(
-                        text=chunk_text,
-                        start_char=start,
-                        end_char=end,
-                        chunk_id=f"custom_chunk_{len(chunks)}",
-                        metadata={**(metadata or {}), **boundary.get('metadata', {})}
-                    )
-                    
-                    # Calculate quality score
-                    chunk.quality_score = self._calculate_quality_score(chunk)
-                    chunks.append(chunk)
-            
-            start = end
-        
-        # Handle remaining text
-        if start < len(text):
-            chunk_text = text[start:].strip()
-            if chunk_text:
-                chunk = Chunk(
-                    text=chunk_text,
-                    start_char=start,
-                    end_char=len(text),
-                    chunk_id=f"custom_chunk_{len(chunks)}",
-                    metadata=metadata or {}
-                )
-                chunk.quality_score = self._calculate_quality_score(chunk)
-                chunks.append(chunk)
-        
-        return chunks
-    
-    def _find_custom_boundaries(self, text: str) -> List[Dict[str, Any]]:
-        """Find chunk boundaries using custom rules."""
-        boundaries = []
-        
-        # Sort rules by priority (higher first)
-        sorted_rules = sorted(self.config.custom_rules, key=lambda r: r.priority, reverse=True)
-        
-        for rule in sorted_rules:
-            matches = rule.matches(text)
-            
-            for start, end, metadata in matches:
-                boundary_pos = start if rule.boundary_position == "before" else end
-                
-                boundaries.append({
-                    'position': boundary_pos,
-                    'rule': rule.name,
-                    'metadata': {
-                        'rule_name': rule.name,
-                        'match_text': text[start:end],
-                        **metadata
-                    }
-                })
-        
-        # Sort boundaries by position and remove duplicates
-        boundaries.sort(key=lambda x: x['position'])
-        unique_boundaries = []
-        last_pos = -1
-        
-        for boundary in boundaries:
-            if boundary['position'] > last_pos:
-                unique_boundaries.append(boundary)
-                last_pos = boundary['position']
-        
-        return unique_boundaries
-
-
-class AdvancedChunkingEngine(ChunkingEngine):
-    """Enhanced chunking engine with advanced features."""
-    
-    def __init__(self, config: Optional[AdvancedChunkingConfig] = None):
-        # Create default config if none provided
-        if config is None:
-            config = AdvancedChunkingConfig()
-        
-        super().__init__(config)
-        self.config = config
+        self.base_engine = ChunkingEngine(config)
         self.relationship_tracker = RelationshipTracker(config)
-        self.metadata_extractor = AdvancedMetadataExtractor(config)
-        self.overlap_manager = OverlapManager(config)
+        self.metadata_extractor = MetadataExtractor(config)
         
-        # Add custom rule chunker
-        if config.apply_custom_rules:
-            self.strategies['custom'] = CustomRuleChunker(config)
-    
-    def chunk_text(self, text: str, strategy: str = "custom", metadata: Optional[Dict[str, Any]] = None) -> List[Chunk]:
-        """Enhanced chunk text with advanced processing."""
-        # Get base chunks
-        chunks = super().chunk_text(text, strategy, metadata)
+    def chunk_with_advanced_features(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> Tuple[List[Chunk], List[ChunkRelationship]]:
+        """Chunk text with all advanced features enabled."""
+        # Start with base chunking
+        chunks = self.base_engine.chunk_text(text, metadata)
         
-        # Apply advanced processing
-        if self.config.track_relationships:
-            self.relationship_tracker.track_sequential_relationships(chunks)
-            self.relationship_tracker.track_semantic_relationships(chunks)
-            self.relationship_tracker.track_entity_relationships(chunks)
-            
-            if self.config.detect_cross_references:
-                self.relationship_tracker.detect_cross_references(chunks)
+        # Apply custom rules if enabled
+        if self.config.apply_custom_rules and self.config.custom_rules:
+            chunks = self._apply_custom_rules(chunks, text)
         
-        # Extract advanced metadata
-        for chunk in chunks:
-            advanced_metadata = self.metadata_extractor.extract_metadata(chunk)
-            chunk.metadata.update(advanced_metadata)
-        
-        # Optimize overlaps
+        # Optimize overlaps if enabled
         if self.config.intelligent_overlap:
-            chunks = self.overlap_manager.optimize_overlaps(chunks)
+            chunks = self._optimize_overlaps(chunks, text)
         
         # Apply dynamic sizing if enabled
         if self.config.dynamic_chunk_sizing:
             chunks = self._apply_dynamic_sizing(chunks)
         
-        return chunks
+        # Extract advanced metadata
+        for chunk in chunks:
+            extracted_metadata = self.metadata_extractor.extract_metadata(chunk)
+            chunk.metadata.update(extracted_metadata)
+        
+        # Track relationships if enabled
+        if self.config.track_relationships:
+            if 'sequential' in self.config.relationship_types:
+                self.relationship_tracker.track_sequential_relationships(chunks)
+            if 'semantic' in self.config.relationship_types:
+                self.relationship_tracker.track_semantic_relationships(chunks)
+            if 'entity' in self.config.relationship_types:
+                self.relationship_tracker.track_entity_relationships(chunks)
+            if 'reference' in self.config.relationship_types:
+                self.relationship_tracker.detect_cross_references(chunks)
+        
+        # Update chunk quality scores
+        for chunk in chunks:
+            chunk.quality_score = self._calculate_advanced_quality_score(chunk)
+        
+        relationships = self.relationship_tracker.get_relationships()
+        
+        return chunks, relationships
     
-    def _apply_dynamic_sizing(self, chunks: List[Chunk]) -> List[Chunk]:
-        """Apply dynamic sizing based on content complexity."""
-        adjusted_chunks = []
+    def _apply_custom_rules(self, chunks: List[Chunk], original_text: str) -> List[Chunk]:
+        """Apply custom chunking rules to modify chunk boundaries."""
+        if not self.config.custom_rules:
+            return chunks
+        
+        # Sort rules by priority (highest first)
+        sorted_rules = sorted(self.config.custom_rules, key=lambda r: r.priority, reverse=True)
+        
+        new_chunks = []
         
         for chunk in chunks:
-            complexity = chunk.metadata.get('content_analysis', {}).get('complexity_score', 0.5)
+            chunk_start = chunk.start_char
+            chunk_end = chunk.end_char
+            chunk_text = original_text[chunk_start:chunk_end]
             
-            # Adjust chunk size based on complexity
-            if complexity > self.config.density_threshold:
-                # High complexity: potentially split into smaller chunks
-                if len(chunk.text) > self.config.max_chunk_size * 0.7:
-                    # Split complex chunk
-                    sub_chunks = self._split_complex_chunk(chunk)
-                    adjusted_chunks.extend(sub_chunks)
-                else:
-                    adjusted_chunks.append(chunk)
-            else:
-                # Low complexity: chunk can be larger
-                adjusted_chunks.append(chunk)
-        
-        return adjusted_chunks
-    
-    def _split_complex_chunk(self, chunk: Chunk) -> List[Chunk]:
-        """Split a complex chunk into smaller pieces."""
-        # Simple sentence-based splitting for complex content
-        sentences = re.split(r'[.!?]+', chunk.text)
-        
-        sub_chunks = []
-        current_text = ""
-        current_start = chunk.start_char
-        
-        for sentence in sentences:
-            sentence = sentence.strip()
-            if not sentence:
+            # Find all rule matches in this chunk
+            rule_matches = []
+            for rule in sorted_rules:
+                matches = rule.matches(chunk_text)
+                for start, end, metadata in matches:
+                    rule_matches.append({
+                        'rule': rule,
+                        'start': chunk_start + start,
+                        'end': chunk_start + end,
+                        'metadata': metadata
+                    })
+            
+            # Sort matches by position
+            rule_matches.sort(key=lambda m: m['start'])
+            
+            if not rule_matches:
+                new_chunks.append(chunk)
                 continue
             
-            if len(current_text + sentence) > self.config.max_chunk_size // 2:
-                if current_text:
-                    # Create sub-chunk
-                    sub_chunk = Chunk(
-                        text=current_text.strip(),
-                        start_char=current_start,
-                        end_char=current_start + len(current_text),
-                        chunk_id=f"{chunk.chunk_id}_sub_{len(sub_chunks)}",
-                        chunk_type=chunk.chunk_type,
-                        section_title=chunk.section_title,
-                        metadata=chunk.metadata.copy()
-                    )
-                    sub_chunk.quality_score = self._calculate_quality_score(sub_chunk)
-                    sub_chunks.append(sub_chunk)
+            # Apply rules to split or modify chunks
+            current_pos = chunk_start
+            
+            for match in rule_matches:
+                rule = match['rule']
+                match_start = match['start']
+                match_end = match['end']
                 
-                current_text = sentence
-                current_start = current_start + len(current_text)
-            else:
-                current_text += (" " + sentence if current_text else sentence)
+                if rule.create_boundary:
+                    # Create chunk before the boundary
+                    if current_pos < match_start:
+                        pre_chunk = Chunk(
+                            text=original_text[current_pos:match_start],
+                            start_char=current_pos,
+                            end_char=match_start,
+                            chunk_type=chunk.chunk_type,
+                            section_title=chunk.section_title,
+                            metadata=chunk.metadata.copy()
+                        )
+                        new_chunks.append(pre_chunk)
+                    
+                    # Handle the matched content
+                    if rule.preserve_match:
+                        match_chunk = Chunk(
+                            text=original_text[match_start:match_end],
+                            start_char=match_start,
+                            end_char=match_end,
+                            chunk_type=f"{chunk.chunk_type}_rule_match",
+                            section_title=chunk.section_title,
+                            metadata={**chunk.metadata, **match['metadata'], 'rule_name': rule.name}
+                        )
+                        new_chunks.append(match_chunk)
+                    
+                    current_pos = match_end
+            
+            # Add remaining content
+            if current_pos < chunk_end:
+                remaining_chunk = Chunk(
+                    text=original_text[current_pos:chunk_end],
+                    start_char=current_pos,
+                    end_char=chunk_end,
+                    chunk_type=chunk.chunk_type,
+                    section_title=chunk.section_title,
+                    metadata=chunk.metadata.copy()
+                )
+                new_chunks.append(remaining_chunk)
         
-        # Handle remaining text
-        if current_text.strip():
-            sub_chunk = Chunk(
-                text=current_text.strip(),
-                start_char=current_start,
+        # Filter out chunks that are too small or too large
+        filtered_chunks = []
+        for chunk in new_chunks:
+            chunk_size = len(chunk.text)
+            if (chunk_size >= self.config.min_chunk_size and 
+                chunk_size <= self.config.max_chunk_size):
+                filtered_chunks.append(chunk)
+        
+        return filtered_chunks
+    
+    def _optimize_overlaps(self, chunks: List[Chunk], original_text: str) -> List[Chunk]:
+        """Optimize overlap between chunks based on content awareness."""
+        if len(chunks) <= 1:
+            return chunks
+        
+        optimized_chunks = []
+        
+        for i, chunk in enumerate(chunks):
+            if i == 0:
+                # First chunk - no previous overlap
+                chunk.overlap_with_previous = 0
+                optimized_chunks.append(chunk)
+                continue
+            
+            prev_chunk = optimized_chunks[i - 1]
+            
+            # Calculate optimal overlap based on content
+            optimal_overlap = self._calculate_optimal_overlap(prev_chunk, chunk, original_text)
+            
+            # Update chunk boundaries
+            new_start = max(chunk.start_char - optimal_overlap, prev_chunk.start_char)
+            new_text = original_text[new_start:chunk.end_char]
+            
+            updated_chunk = Chunk(
+                text=new_text,
+                start_char=new_start,
                 end_char=chunk.end_char,
-                chunk_id=f"{chunk.chunk_id}_sub_{len(sub_chunks)}",
+                chunk_id=chunk.chunk_id,
                 chunk_type=chunk.chunk_type,
                 section_title=chunk.section_title,
-                metadata=chunk.metadata.copy()
+                metadata=chunk.metadata.copy(),
+                overlap_with_previous=chunk.start_char - new_start,
+                overlap_with_next=chunk.overlap_with_next,
+                quality_score=chunk.quality_score
             )
-            sub_chunk.quality_score = self._calculate_quality_score(sub_chunk)
-            sub_chunks.append(sub_chunk)
-        
-        return sub_chunks if sub_chunks else [chunk]
-    
-    def get_relationship_analysis(self) -> Dict[str, Any]:
-        """Get comprehensive relationship analysis."""
-        relationships = self.relationship_tracker.relationships
-        
-        analysis = {
-            'total_relationships': len(relationships),
-            'relationship_types': {},
-            'strongest_relationships': [],
-            'relationship_graph': self.relationship_tracker.get_relationship_graph(),
-            'entity_clusters': dict(self.relationship_tracker.entity_index),
-            'topic_clusters': dict(self.relationship_tracker.topic_index)
-        }
-        
-        # Count by type
-        for rel in relationships:
-            rel_type = rel.relationship_type
-            analysis['relationship_types'][rel_type] = analysis['relationship_types'].get(rel_type, 0) + 1
-        
-        # Find strongest relationships
-        strongest = sorted(relationships, key=lambda r: r.strength, reverse=True)[:10]
-        analysis['strongest_relationships'] = [rel.to_dict() for rel in strongest]
-        
-        return analysis
-    
-    def process_text(self, text: str, config_data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Process text with advanced chunking and return results in format expected by frontend.
-        
-        Args:
-            text: The input text to process
-            config_data: Configuration dictionary from frontend
             
-        Returns:
-            Dictionary with chunks, relationships, and metadata
-        """
-        import time
-        start_time = time.time()
+            # Update previous chunk's overlap_with_next
+            prev_chunk.overlap_with_next = max(0, prev_chunk.end_char - new_start)
+            
+            optimized_chunks.append(updated_chunk)
         
-        # Convert config from frontend format to internal format
-        custom_rules = []
-        for rule_data in config_data.get('custom_rules', []):
-            if rule_data.get('enabled', True):
-                rule = CustomChunkingRule(
-                    name=rule_data['name'],
-                    description=rule_data['description'],
-                    pattern=rule_data['pattern'],
-                    pattern_type=rule_data.get('pattern_type', 'regex'),
-                    priority=rule_data.get('priority', 0),
-                    boundary_position=rule_data.get('boundary_position', 'before'),
-                    extract_metadata=True,
-                    metadata_key=rule_data['name'].lower().replace(' ', '_')
+        return optimized_chunks
+    
+    def _calculate_optimal_overlap(self, prev_chunk: Chunk, current_chunk: Chunk, original_text: str) -> int:
+        """Calculate optimal overlap size between two chunks."""
+        max_overlap = int(min(len(prev_chunk.text), len(current_chunk.text)) * self.config.overlap_max_ratio)
+        min_overlap = int(min(len(prev_chunk.text), len(current_chunk.text)) * self.config.overlap_min_ratio)
+        
+        if self.config.overlap_optimization == "fixed":
+            return self.config.overlap_size
+        
+        # Content-aware overlap
+        prev_text = prev_chunk.text
+        current_text = current_chunk.text
+        
+        # Find natural boundary points (sentence endings)
+        sentence_endings = []
+        for match in re.finditer(r'[.!?]\s+', prev_text[-max_overlap:]):
+            sentence_endings.append(match.end())
+        
+        if sentence_endings:
+            # Use the last sentence boundary within the overlap range
+            optimal_overlap = max_overlap - sentence_endings[-1]
+        else:
+            # Fallback to paragraph or word boundaries
+            word_boundaries = []
+            for match in re.finditer(r'\s+', prev_text[-max_overlap:]):
+                word_boundaries.append(match.start())
+            
+            if word_boundaries:
+                # Use a word boundary near the middle of the overlap range
+                middle_target = max_overlap // 2
+                closest_boundary = min(word_boundaries, key=lambda x: abs(x - middle_target))
+                optimal_overlap = max_overlap - closest_boundary
+            else:
+                optimal_overlap = self.config.overlap_size
+        
+        return max(min_overlap, min(optimal_overlap, max_overlap))
+    
+    def _apply_dynamic_sizing(self, chunks: List[Chunk]) -> List[Chunk]:
+        """Apply dynamic chunk sizing based on content complexity."""
+        dynamic_chunks = []
+        
+        for chunk in chunks:
+            # Calculate complexity from metadata if available
+            complexity = chunk.metadata.get('complexity_score', 0.5)
+            
+            # Adjust target size based on complexity
+            base_size = self.config.max_chunk_size
+            complexity_adjustment = (complexity - 0.5) * self.config.complexity_factor
+            target_size = int(base_size * (1 + complexity_adjustment))
+            
+            # Ensure target size is within bounds
+            target_size = max(self.config.min_chunk_size, 
+                            min(target_size, self.config.max_chunk_size * 2))
+            
+            current_size = len(chunk.text)
+            
+            # If chunk is much larger than target, consider splitting
+            if current_size > target_size * 1.5:
+                # Split the chunk
+                split_chunks = self._split_chunk_intelligently(chunk, target_size)
+                dynamic_chunks.extend(split_chunks)
+            # If chunk is much smaller than target, it might be merged later
+            else:
+                dynamic_chunks.append(chunk)
+        
+        # Merge small adjacent chunks if beneficial
+        merged_chunks = self._merge_small_chunks(dynamic_chunks)
+        
+        return merged_chunks
+    
+    def _split_chunk_intelligently(self, chunk: Chunk, target_size: int) -> List[Chunk]:
+        """Split a chunk intelligently at natural boundaries."""
+        text = chunk.text
+        
+        if len(text) <= target_size:
+            return [chunk]
+        
+        # Find split points (sentence boundaries preferred)
+        sentence_boundaries = [0]
+        for match in re.finditer(r'[.!?]\s+', text):
+            sentence_boundaries.append(match.end())
+        sentence_boundaries.append(len(text))
+        
+        splits = []
+        current_start = 0
+        
+        for i in range(1, len(sentence_boundaries)):
+            current_end = sentence_boundaries[i]
+            current_length = current_end - current_start
+            
+            # If this segment is close to target size, make a split
+            if current_length >= target_size * 0.8:
+                split_text = text[current_start:current_end]
+                split_chunk = Chunk(
+                    text=split_text,
+                    start_char=chunk.start_char + current_start,
+                    end_char=chunk.start_char + current_end,
+                    chunk_id=f"{chunk.chunk_id}_split_{len(splits)}",
+                    chunk_type=chunk.chunk_type,
+                    section_title=chunk.section_title,
+                    metadata=chunk.metadata.copy()
                 )
-                custom_rules.append(rule)
+                splits.append(split_chunk)
+                current_start = current_end
         
-        # Update engine config
-        self.config.max_chunk_size = config_data.get('max_chunk_size', 800)
-        self.config.overlap_size = config_data.get('overlap_size', 100)
-        self.config.intelligent_overlap = config_data.get('intelligent_overlap', True)
-        self.config.track_relationships = config_data.get('track_relationships', True)
-        self.config.extract_entities = config_data.get('extract_entities', True)
-        self.config.extract_topics = config_data.get('extract_topics', True)
-        self.config.dynamic_chunk_sizing = config_data.get('dynamic_sizing', True)
-        self.config.custom_rules = custom_rules
-        self.config.apply_custom_rules = len(custom_rules) > 0
+        # Handle remaining text
+        if current_start < len(text):
+            remaining_text = text[current_start:]
+            if len(remaining_text) >= self.config.min_chunk_size:
+                remaining_chunk = Chunk(
+                    text=remaining_text,
+                    start_char=chunk.start_char + current_start,
+                    end_char=chunk.end_char,
+                    chunk_id=f"{chunk.chunk_id}_split_{len(splits)}",
+                    chunk_type=chunk.chunk_type,
+                    section_title=chunk.section_title,
+                    metadata=chunk.metadata.copy()
+                )
+                splits.append(remaining_chunk)
+            elif splits:
+                # Merge with last split if too small
+                last_split = splits[-1]
+                merged_text = last_split.text + remaining_text
+                updated_split = Chunk(
+                    text=merged_text,
+                    start_char=last_split.start_char,
+                    end_char=chunk.end_char,
+                    chunk_id=last_split.chunk_id,
+                    chunk_type=last_split.chunk_type,
+                    section_title=last_split.section_title,
+                    metadata=last_split.metadata
+                )
+                splits[-1] = updated_split
         
-        # Reinitialize components with new config
-        self.relationship_tracker = RelationshipTracker(self.config)
-        self.metadata_extractor = AdvancedMetadataExtractor(self.config)
-        self.overlap_manager = OverlapManager(self.config)
-        
-        if self.config.apply_custom_rules:
-            self.strategies['custom'] = CustomRuleChunker(self.config)
-        
-        # Process the text
-        try:
-            chunks = self.chunk_text(text, strategy="custom" if custom_rules else "semantic")
-            relationships = self.relationship_tracker.relationships
-            processing_time = int((time.time() - start_time) * 1000)
-            
-            # Convert chunks to frontend format
-            chunk_results = []
-            for chunk in chunks:
-                metadata = chunk.metadata or {}
-                
-                chunk_result = {
-                    "id": chunk.chunk_id,
-                    "text": chunk.text,
-                    "start_char": chunk.start_char,
-                    "end_char": chunk.end_char,
-                    "chunk_type": chunk.chunk_type or "text",
-                    "quality_score": chunk.quality_score or 0.8,
-                    "metadata": {
-                        "word_count": len(chunk.text.split()),
-                        "char_count": len(chunk.text),
-                        "complexity": metadata.get('content_analysis', {}).get('complexity_score', 0.5),
-                        "topics": metadata.get('topics', []),
-                        "entities": metadata.get('entities', []),
-                        "custom_fields": {k: str(v) for k, v in metadata.items() if k not in ['topics', 'entities', 'content_analysis']}
-                    }
-                }
-                chunk_results.append(chunk_result)
-            
-            # Convert relationships to frontend format
-            relationship_results = []
-            for rel in relationships:
-                relationship_results.append({
-                    "source_chunk_id": rel.source_chunk_id,
-                    "target_chunk_id": rel.target_chunk_id,
-                    "relationship_type": rel.relationship_type,
-                    "strength": rel.strength,
-                    "metadata": {k: str(v) for k, v in rel.metadata.items()}
-                })
-            
-            # Calculate statistics
-            total_words = sum(len(chunk.text.split()) for chunk in chunks)
-            avg_chunk_size = total_words / len(chunks) if chunks else 0
-            avg_quality = sum(chunk.quality_score or 0.8 for chunk in chunks) / len(chunks) if chunks else 0.8
-            
-            # Processing steps for the frontend
-            processing_steps = [
-                {"step_name": "Rule Application", "status": "completed", "duration_ms": processing_time // 5, "details": f"Applied {len(custom_rules)} custom rules"},
-                {"step_name": "Text Chunking", "status": "completed", "duration_ms": processing_time // 4, "details": f"Created {len(chunks)} chunks"},
-                {"step_name": "Metadata Extraction", "status": "completed", "duration_ms": processing_time // 4, "details": "Extracted entities and topics"},
-                {"step_name": "Relationship Tracking", "status": "completed", "duration_ms": processing_time // 4, "details": f"Found {len(relationships)} relationships"},
-                {"step_name": "Quality Assessment", "status": "completed", "duration_ms": processing_time // 5, "details": f"Average quality: {avg_quality:.2f}"}
-            ]
-            
-            # Return results in expected format
-            return {
-                "chunks": chunk_results,
-                "relationships": relationship_results,
-                "metadata": {
-                    "total_chunks": len(chunks),
-                    "total_relationships": len(relationships),
-                    "average_chunk_size": avg_chunk_size,
-                    "quality_score": avg_quality,
-                    "processing_steps": processing_steps
-                },
-                "processing_time_ms": processing_time
-            }
-            
-        except Exception as e:
-            logger.error(f"Error processing text: {str(e)}")
-            return {
-                "error": f"Processing failed: {str(e)}",
-                "chunks": [],
-                "relationships": [],
-                "metadata": {
-                    "total_chunks": 0,
-                    "total_relationships": 0,
-                    "average_chunk_size": 0,
-                    "quality_score": 0,
-                    "processing_steps": [{"step_name": "Error", "status": "failed", "duration_ms": 0, "details": str(e)}]
-                },
-                "processing_time_ms": 0
-            }
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    # Configure logging
-    logging.basicConfig(level=logging.INFO)
+        return splits if splits else [chunk]
     
-    # Create advanced configuration
-    custom_rules = [
+    def _merge_small_chunks(self, chunks: List[Chunk]) -> List[Chunk]:
+        """Merge adjacent small chunks if beneficial."""
+        if not self.config.merge_small_chunks:
+            return chunks
+        
+        merged = []
+        i = 0
+        
+        while i < len(chunks):
+            current_chunk = chunks[i]
+            
+            # Check if current chunk is small and can be merged with next
+            if (i < len(chunks) - 1 and 
+                len(current_chunk.text) < self.config.min_chunk_size * 1.5):
+                
+                next_chunk = chunks[i + 1]
+                combined_length = len(current_chunk.text) + len(next_chunk.text)
+                
+                # Merge if combined size is reasonable
+                if combined_length <= self.config.max_chunk_size * 1.2:
+                    merged_text = current_chunk.text + " " + next_chunk.text
+                    merged_chunk = Chunk(
+                        text=merged_text,
+                        start_char=current_chunk.start_char,
+                        end_char=next_chunk.end_char,
+                        chunk_id=f"merged_{current_chunk.chunk_id}_{next_chunk.chunk_id}",
+                        chunk_type=current_chunk.chunk_type,
+                        section_title=current_chunk.section_title,
+                        metadata={**current_chunk.metadata, 'merged': True}
+                    )
+                    merged.append(merged_chunk)
+                    i += 2  # Skip next chunk as it's been merged
+                    continue
+            
+            merged.append(current_chunk)
+            i += 1
+        
+        return merged
+    
+    def _calculate_advanced_quality_score(self, chunk: Chunk) -> float:
+        """Calculate advanced quality score incorporating metadata."""
+        base_score = 0.5
+        
+        # Text length factor
+        length = len(chunk.text.strip())
+        if length < self.config.min_chunk_size:
+            length_score = length / self.config.min_chunk_size * 0.3
+        elif length > self.config.max_chunk_size:
+            length_score = max(0.3, 1.0 - (length - self.config.max_chunk_size) / self.config.max_chunk_size)
+        else:
+            length_score = 1.0
+        
+        # Content quality factors from metadata
+        metadata = chunk.metadata
+        
+        # Sentence structure
+        sentence_count = metadata.get('sentence_count', 1)
+        if sentence_count == 0:
+            sentence_score = 0.1
+        else:
+            avg_sentence_length = metadata.get('avg_words_per_sentence', 10)
+            # Optimal sentence length is around 15-25 words
+            if 10 <= avg_sentence_length <= 30:
+                sentence_score = 1.0
+            else:
+                sentence_score = max(0.3, 1.0 - abs(avg_sentence_length - 20) / 50)
+        
+        # Lexical diversity
+        diversity = metadata.get('lexical_diversity', 0.5)
+        diversity_score = min(1.0, diversity * 2)  # Higher diversity is better
+        
+        # Entity and keyword richness
+        entity_count = metadata.get('entity_count', 0)
+        keyword_count = len(metadata.get('keywords', []))
+        content_richness = min(1.0, (entity_count + keyword_count) / 10)
+        
+        # Complexity appropriateness
+        complexity = metadata.get('complexity_score', 0.5)
+        complexity_score = 1.0 - abs(complexity - 0.6)  # Moderate complexity is ideal
+        
+        # Combine all factors
+        quality_score = (
+            base_score * 0.1 +
+            length_score * 0.3 +
+            sentence_score * 0.2 +
+            diversity_score * 0.15 +
+            content_richness * 0.15 +
+            complexity_score * 0.1
+        )
+        
+        return min(1.0, max(0.0, quality_score))
+
+
+# Predefined custom rules for common use cases
+def create_structured_scripture_rules() -> List[CustomChunkingRule]:
+    """Create custom rules for processing structured scriptures."""
+    return [
         CustomChunkingRule(
             name="verse_boundary",
-            description="Split at verse numbers",
-            pattern=r"॥\s*\d+\s*॥",
+            description="Create boundaries at verse numbers",
+            pattern=r'^\d+\.\d+',  # Matches patterns like "2.47" at start of line
             priority=10,
-            boundary_position="after",
+            create_boundary=True,
+            boundary_position="before",
+            preserve_match=True,
             extract_metadata=True,
             metadata_key="verse_number"
         ),
         CustomChunkingRule(
-            name="section_header",
-            description="Split at section headers",
-            pattern=r"^[A-Z][A-Z\s]+$",
-            priority=8,
+            name="chapter_boundary", 
+            description="Create boundaries at chapter headings",
+            pattern=r'(?i)^chapter\s+\d+',
+            priority=15,
+            create_boundary=True,
             boundary_position="before",
+            preserve_match=True,
             extract_metadata=True,
-            metadata_key="section_title"
+            metadata_key="chapter_title"
+        ),
+        CustomChunkingRule(
+            name="sanskrit_verse",
+            description="Preserve Sanskrit verses as complete units",
+            pattern=r'[ॐ-ॿ]+.*?[ॐ-ॿ]+',  # Devanagari script range
+            priority=5,
+            create_boundary=True,
+            boundary_position="around",
+            preserve_match=True,
+            extract_metadata=True,
+            metadata_key="sanskrit_verse"
         )
     ]
+
+
+def create_technical_document_rules() -> List[CustomChunkingRule]:
+    """Create custom rules for processing technical documents."""
+    return [
+        CustomChunkingRule(
+            name="code_block",
+            description="Preserve code blocks as complete units",
+            pattern=r'```.*?```',
+            priority=10,
+            create_boundary=True,
+            boundary_position="around",
+            preserve_match=True,
+            extract_metadata=True,
+            metadata_key="code_block"
+        ),
+        CustomChunkingRule(
+            name="function_definition",
+            description="Create boundaries at function definitions",
+            pattern=r'(?i)^(?:def|function|class)\s+\w+',
+            priority=8,
+            create_boundary=True,
+            boundary_position="before",
+            preserve_match=True,
+            extract_metadata=True,
+            metadata_key="function_name"
+        ),
+        CustomChunkingRule(
+            name="section_header",
+            description="Create boundaries at section headers",
+            pattern=r'^#{1,6}\s+.+$',  # Markdown headers
+            priority=12,
+            create_boundary=True,
+            boundary_position="before",
+            preserve_match=True,
+            extract_metadata=True,
+            metadata_key="section_header"
+        )
+    ]
+
+
+# Usage example and factory functions
+def create_advanced_chunking_config(content_type: str = "general") -> AdvancedChunkingConfig:
+    """Create optimized configuration for different content types."""
+    config = AdvancedChunkingConfig()
     
-    config = AdvancedChunkingConfig(
-        max_chunk_size=800,
-        custom_rules=custom_rules,
-        apply_custom_rules=True,
-        track_relationships=True,
-        extract_entities=True,
-        extract_topics=True,
-        intelligent_overlap=True,
-        dynamic_chunk_sizing=True
-    )
-    
-    # Test with sample text
-    sample_text = """
-    Chapter 2: Contents of the Gita Summarized
-    
-    Text 47
-    कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।
-    मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥ ४७ ॥
-    
-    Translation
-    You have a right to perform your prescribed duty, but you are not entitled 
-    to the fruits of action. Never consider yourself the cause of the results 
-    of your activities, and never be attached to not doing your duty.
-    
-    Purport
-    This verse is the essence of karma-yoga. Lord Krishna explains the principle
-    of detached action, which is fundamental to spiritual progress.
-    """
-    
-    # Create advanced chunking engine
+    if content_type == "scripture":
+        config.custom_rules = create_structured_scripture_rules()
+        config.preserve_verse_structure = True
+        config.extract_entities = True
+        config.extract_topics = True
+        config.max_chunk_size = 800  # Smaller chunks for verse-based content
+        
+    elif content_type == "technical":
+        config.custom_rules = create_technical_document_rules()
+        config.preserve_citations = True
+        config.extract_keywords = True
+        config.max_chunk_size = 1200  # Larger chunks for technical content
+        config.dynamic_chunk_sizing = True
+        
+    elif content_type == "academic":
+        config.extract_entities = True
+        config.extract_keywords = True
+        config.detect_cross_references = True
+        config.track_relationships = True
+        config.max_chunk_size = 1000
+        
+    return config
+
+
+if __name__ == "__main__":
+    # Example usage
+    config = create_advanced_chunking_config("spiritual")
     engine = AdvancedChunkingEngine(config)
     
-    print("🧪 Testing Advanced Chunking Features")
-    print("=" * 50)
+    sample_text = """
+    Chapter 2: The Eternal Reality of the Soul
     
-    # Chunk the text
-    chunks = engine.chunk_text(sample_text, strategy="custom")
+    2.12 Never was there a time when I did not exist, nor you, nor all these kings; 
+    nor in the future shall any of us cease to be.
     
-    print(f"Generated {len(chunks)} chunks with advanced features:")
+    2.13 As the embodied soul continuously passes, in this body, from boyhood to 
+    youth to old age, the soul similarly passes into another body at death. 
+    A sober person is not bewildered by such a change.
+    """
     
-    for i, chunk in enumerate(chunks):
-        print(f"\nChunk {i+1} ({chunk.chunk_id}):")
-        print(f"  Text: {chunk.text[:100]}...")
-        print(f"  Quality Score: {chunk.quality_score:.2f}")
-        print(f"  Entities: {len(chunk.metadata.get('entities', []))}")
-        print(f"  Keywords: {len(chunk.metadata.get('keywords', []))}")
-        print(f"  Topics: {chunk.metadata.get('topics', [])}")
+    chunks, relationships = engine.chunk_with_advanced_features(sample_text)
     
-    # Get relationship analysis
-    analysis = engine.get_relationship_analysis()
-    print(f"\nRelationship Analysis:")
-    print(f"  Total relationships: {analysis['total_relationships']}")
-    print(f"  Relationship types: {analysis['relationship_types']}")
-    
-    print(f"\n✅ Advanced chunking features test completed!")
+    print(f"Generated {len(chunks)} chunks with {len(relationships)} relationships")
+    for chunk in chunks:
+        print(f"Chunk: {chunk.chunk_id}")
+        print(f"Quality Score: {chunk.quality_score:.2f}")
+        print(f"Metadata: {chunk.metadata}")
+        print("---")

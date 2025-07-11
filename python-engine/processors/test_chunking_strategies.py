@@ -7,7 +7,7 @@ This script tests all chunking strategies including:
 - Fixed-size chunking with boundary detection
 - Semantic chunking (when available)
 - Hierarchical chunking with structure preservation
-- Spiritual text chunking with domain-specific logic
+- Universal content chunking with intelligent domain recognition
 - Chunk quality assessment and post-processing
 
 Author: Lexicon Development Team
@@ -210,76 +210,100 @@ def test_hierarchical_chunking():
         return False
 
 
-def test_spiritual_text_chunking():
-    """Test spiritual text chunking strategy."""
-    print("\nTesting spiritual text chunking...")
+def test_universal_content_chunking():
+    """Test universal content chunking strategy."""
+    print("\nTesting universal content chunking...")
     
     try:
-        config = ChunkingConfig(max_chunk_size=800, preserve_verse_structure=True)
-        chunker = SpiritualTextChunker(config)
+        config = ChunkingConfig(max_chunk_size=800, respect_section_boundaries=True)
+        chunker = UniversalContentChunker(config)
         
-        # Test spiritual text with verse structure
-        spiritual_text = """
-        Bg. 2.47
+        # Test technical documentation with structured content
+        technical_text = """
+        # API Reference Documentation
         
-        कर्मण्येवाधिकारस्ते मा फलेषु कदाचन ।
-        मा कर्मफलहेतुर्भूर्मा ते सङ्गोऽस्त्वकर्मणि ॥ ४७ ॥
+        ## Authentication
         
-        Translation
-        You have a right to perform your prescribed duty, but you are not entitled 
-        to the fruits of action. Never consider yourself the cause of the results 
-        of your activities, and never be attached to not doing your duty.
+        All API requests require authentication using Bearer tokens.
         
-        Synonyms
-        karmaṇi — in prescribed duties; eva — certainly; adhikāraḥ — right; te — of you
+        ### Headers
         
-        Purport
-        There are three considerations here: prescribed duties, capricious work, 
-        and inaction. Prescribed duties refer to activities performed according 
-        to one's position in the material world.
+        Authorization: Bearer <your_api_key>
+        Content-Type: application/json
         
-        Bg. 2.48
+        ## Endpoints
         
-        योगस्थः कुरु कर्माणि सङ्गं त्यक्त्वा धनञ्जय ।
-        सिद्ध्यसिद्ध्योः समो भूत्वा समत्वं योग उच्यते ॥ ४८ ॥
+        ### GET /api/v1/users
         
-        Translation
-        Perform your duty equipoised, O Arjuna, abandoning all attachment to success 
-        or failure. Such equanimity is called yoga.
+        Description: Retrieve a list of users
+        
+        Parameters:
+        - limit (integer): Maximum number of users to return (default: 10)
+        - offset (integer): Number of users to skip (default: 0)
+        
+        Response:
+        {
+          "users": [
+            {
+              "id": 1,
+              "name": "John Doe",
+              "email": "john@example.com"
+            }
+          ],
+          "total": 1
+        }
+        
+        ### POST /api/v1/users
+        
+        Description: Create a new user
+        
+        Request Body:
+        {
+          "name": "Jane Doe",
+          "email": "jane@example.com"
+        }
+        
+        Response:
+        {
+          "id": 2,
+          "name": "Jane Doe",
+          "email": "jane@example.com",
+          "created_at": "2025-07-12T10:00:00Z"
+        }
         """
         
-        chunks = chunker.chunk_text(spiritual_text.strip())
+        chunks = chunker.chunk_text(technical_text.strip())
         
         if not chunks:
             print("✗ No chunks generated")
             return False
         
-        # Check for spiritual verse chunks
-        verse_chunks = [c for c in chunks if c.chunk_type == 'spiritual_verse']
-        if not verse_chunks:
-            print("✗ No spiritual verse chunks found")
+        # Check for structured content chunks
+        api_chunks = [c for c in chunks if 'api' in c.text.lower()]
+        if not api_chunks:
+            print("✗ No API documentation chunks found")
             return False
         
-        # Check that Sanskrit content is preserved
-        has_sanskrit = any('कर्मण्येवाधिकारस्ते' in chunk.text for chunk in chunks)
-        if not has_sanskrit:
-            print("✗ Sanskrit content not preserved")
+        # Check that structured content is preserved
+        has_headers = any('#' in chunk.text for chunk in chunks)
+        if not has_headers:
+            print("✗ Header structure not preserved")
             return False
         
-        # Check verse markers
-        has_verse_markers = any('॥' in chunk.text for chunk in chunks)
-        if not has_verse_markers:
-            print("✗ Verse markers not preserved")
+        # Check API documentation content
+        has_endpoints = any('GET' in chunk.text or 'POST' in chunk.text for chunk in chunks)
+        if not has_endpoints:
+            print("✗ API endpoint information not preserved")
             return False
         
-        print(f"✓ Spiritual text chunking successful")
+        print(f"✓ Universal content chunking successful")
         print(f"  Generated {len(chunks)} chunks")
-        print(f"  Verse chunks: {len(verse_chunks)}")
+        print(f"  API chunks: {len(api_chunks)}")
         
         return True
         
     except Exception as e:
-        print(f"✗ Spiritual text chunking failed: {e}")
+        print(f"✗ Universal content chunking failed: {e}")
         return False
 
 
@@ -471,7 +495,7 @@ def run_all_tests():
         ("Chunking Configuration", test_chunking_config),
         ("Fixed-Size Chunking", test_fixed_size_chunking),
         ("Hierarchical Chunking", test_hierarchical_chunking),
-        ("Spiritual Text Chunking", test_spiritual_text_chunking),
+        ("Universal Content Chunking", test_universal_content_chunking),
         ("Semantic Chunking", test_semantic_chunking),
         ("Chunking Engine", test_chunking_engine),
         ("Quality Scoring", test_quality_scoring),

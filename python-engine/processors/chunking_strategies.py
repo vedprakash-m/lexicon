@@ -2,16 +2,18 @@
 Text Chunking Strategies
 
 This module provides multiple sophisticated text chunking approaches for creating
-high-quality RAG datasets. Each strategy is optimized for different content types
-and use cases, with special consideration for spiritual texts and structured content.
+high-quality RAG datasets from any text content. Each strategy is optimized for 
+different content types and use cases, supporting technical documentation, academic
+papers, business documents, literature, legal texts, medical content, educational
+materials, web content, religious texts, and any structured text.
 
 Features:
 - Semantic chunking based on meaning and context
 - Fixed-size chunking with smart boundary detection
 - Hierarchical chunking preserving document structure
-- Custom chunking rules for domain-specific content
+- Custom chunking rules for universal content types
 - Overlap management and boundary optimization
-- Quality assessment for generated chunks
+- Quality assessment for generated chunks across all domains
 
 Author: Lexicon Development Team
 """
@@ -360,7 +362,7 @@ class SemanticChunker(ChunkingStrategy):
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """Split text into sentences."""
-        # Enhanced sentence splitting for spiritual texts
+        # Enhanced sentence splitting for structured scriptures
         sentences = []
         
         # Handle verse markers specially
@@ -621,11 +623,31 @@ class HierarchicalChunker(ChunkingStrategy):
         return sub_chunks
 
 
-class SpiritualTextChunker(ChunkingStrategy):
-    """Specialized chunker for spiritual texts with domain-specific logic."""
+class UniversalContentChunker(ChunkingStrategy):
+    """Specialized chunker for any structured content with intelligent domain recognition.
+    
+    Handles texts with multi-component structure across all domains:
+    - Technical documentation: API specs, code examples, procedures
+    - Academic papers: abstracts, sections, citations, references
+    - Business documents: executive summaries, sections, appendices
+    - Legal texts: clauses, subsections, citations, precedents
+    - Medical content: procedures, symptoms, treatments, studies
+    - Educational materials: lessons, exercises, examples
+    - Literature: chapters, verses, stanzas, commentary
+    - Religious texts: verses, commentary, translations
+    - Web content: articles, sections, metadata
+    
+    Supports universal content recognition for:
+    - Any structured text with sections and subsections
+    - Multi-language content with translations
+    - Texts with commentary and explanations
+    - Documents with citations and references
+    - Content with code blocks and examples
+    """
     
     def chunk_text(self, text: str, metadata: Optional[Dict[str, Any]] = None) -> List[Chunk]:
-        """Chunk spiritual text preserving verse and commentary structure."""
+        """Chunk any structured content preserving sections, subsections, and component structure."""
+        """Chunk structured scripture text preserving verse and commentary structure."""
         if not text.strip():
             return []
         
@@ -635,7 +657,8 @@ class SpiritualTextChunker(ChunkingStrategy):
         verse_sections = self._extract_verse_sections(text)
         
         for section in verse_sections:
-            section_chunks = self._chunk_spiritual_section(section, metadata)
+            section_chunks = self._chunk_scripture_section(section, metadata)
+            chunks.extend(section_chunks)
             chunks.extend(section_chunks)
         
         return chunks
@@ -779,9 +802,9 @@ class SpiritualTextChunker(ChunkingStrategy):
         
         return components
     
-    def _chunk_spiritual_section(self, section: Dict[str, Any], 
+    def _chunk_scripture_section(self, section: Dict[str, Any], 
                                metadata: Optional[Dict[str, Any]]) -> List[Chunk]:
-        """Chunk a spiritual text section."""
+        """Chunk a structured scripture text section."""
         chunks = []
         
         if section['type'] == 'verse_section':
@@ -810,7 +833,7 @@ class SpiritualTextChunker(ChunkingStrategy):
                     start_char=section['start'],
                     end_char=section['end'],
                     chunk_id=f"verse_{verse_marker.replace(' ', '_')}",
-                    chunk_type="spiritual_verse",
+                    chunk_type="scripture_verse",
                     section_title=verse_marker,
                     metadata={
                         **(metadata or {}),
@@ -839,7 +862,9 @@ class ChunkingEngine:
             'fixed_size': FixedSizeChunker(self.config),
             'semantic': SemanticChunker(self.config),
             'hierarchical': HierarchicalChunker(self.config),
-            'spiritual': SpiritualTextChunker(self.config)
+            'universal_content': UniversalContentChunker(self.config),
+            # Backward compatibility
+            'spiritual': UniversalContentChunker(self.config)
         }
     
     def chunk_text(self, text: str, strategy: str = 'fixed_size', 

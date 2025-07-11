@@ -1,0 +1,781 @@
+{
+  "timestamp": "2025-06-26T21:00:00.000000",
+  "summary": {
+    "total_books": 12,
+    "total_relationships": 27,
+    "relationship_types": 6,
+    "thematic_clusters": 2
+  },
+  "statistics": {
+    "total_books": 12,
+    "total_relationships": 27,
+    "relationship_types": {
+      "same_author": 15,
+      "sequel": 2,
+      "same_series": 1,
+      "translation": 2,
+      "edition": 1,
+      "thematic_similarity": 6
+    },
+    "confidence_distribution": {
+      "very_high": 20,
+      "high": 1,
+      "medium": 5,
+      "low": 1
+    },
+    "thematic_clusters": 2,
+    "books_with_relationships": 6
+  },
+  "books": {
+    "bhagavad_gita_en": {
+      "title": "Bhagavad Gita As It Is",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1972,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Yoga",
+        "Meditation",
+        "Bhakti"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "bhagavad_gita_es": {
+      "title": "Bhagavad Gita Tal Como Es",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1975,
+      "language": "Spanish",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Yoga",
+        "Meditation",
+        "Bhakti"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "bhagavad_gita_revised": {
+      "title": "Bhagavad Gita As It Is (Revised Edition)",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1983,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Yoga",
+        "Meditation",
+        "Bhakti"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": "Revised"
+    },
+    "srimad_bhagavatam_1": {
+      "title": "Srimad Bhagavatam Canto 1",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1974,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality",
+        "Literature"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Stories",
+        "Devotion",
+        "Bhakti"
+      ],
+      "series": "Srimad Bhagavatam",
+      "series_number": 1,
+      "edition": null
+    },
+    "srimad_bhagavatam_2": {
+      "title": "Srimad Bhagavatam Canto 2",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1975,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality",
+        "Literature"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Stories",
+        "Devotion",
+        "Bhakti"
+      ],
+      "series": "Srimad Bhagavatam",
+      "series_number": 2,
+      "edition": null
+    },
+    "srimad_bhagavatam_3": {
+      "title": "Srimad Bhagavatam Canto 3",
+      "authors": [
+        "A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "publication_year": 1976,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality",
+        "Literature"
+      ],
+      "subjects": [
+        "Hindu Philosophy",
+        "Stories",
+        "Devotion",
+        "Bhakti"
+      ],
+      "series": "Srimad Bhagavatam",
+      "series_number": 3,
+      "edition": null
+    },
+    "art_of_war": {
+      "title": "The Art of War",
+      "authors": [
+        "Sun Tzu"
+      ],
+      "publication_year": 500,
+      "language": "English",
+      "categories": [
+        "Strategy",
+        "Military",
+        "Philosophy"
+      ],
+      "subjects": [
+        "War",
+        "Strategy",
+        "Leadership",
+        "Tactics"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "tao_te_ching": {
+      "title": "Tao Te Ching",
+      "authors": [
+        "Lao Tzu"
+      ],
+      "publication_year": 400,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Religion",
+        "Spirituality"
+      ],
+      "subjects": [
+        "Taoism",
+        "Eastern Philosophy",
+        "Wisdom"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "thinking_fast_slow": {
+      "title": "Thinking, Fast and Slow",
+      "authors": [
+        "Daniel Kahneman"
+      ],
+      "publication_year": 2011,
+      "language": "English",
+      "categories": [
+        "Psychology",
+        "Science",
+        "Behavioral Economics"
+      ],
+      "subjects": [
+        "Cognitive Psychology",
+        "Decision Making",
+        "Behavioral Science"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "mindfulness_plain_english": {
+      "title": "Mindfulness in Plain English",
+      "authors": [
+        "Bhante Henepola Gunaratana"
+      ],
+      "publication_year": 1991,
+      "language": "English",
+      "categories": [
+        "Religion",
+        "Spirituality",
+        "Self-Help"
+      ],
+      "subjects": [
+        "Buddhism",
+        "Meditation",
+        "Mindfulness"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "power_of_now": {
+      "title": "The Power of Now",
+      "authors": [
+        "Eckhart Tolle"
+      ],
+      "publication_year": 1997,
+      "language": "English",
+      "categories": [
+        "Spirituality",
+        "Self-Help",
+        "Philosophy"
+      ],
+      "subjects": [
+        "Spiritual Awakening",
+        "Present Moment",
+        "Consciousness"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    },
+    "meditations": {
+      "title": "Meditations",
+      "authors": [
+        "Marcus Aurelius"
+      ],
+      "publication_year": 180,
+      "language": "English",
+      "categories": [
+        "Philosophy",
+        "Classical Literature"
+      ],
+      "subjects": [
+        "Stoicism",
+        "Ethics",
+        "Personal Development"
+      ],
+      "series": null,
+      "series_number": null,
+      "edition": null
+    }
+  },
+  "relationships": [
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_es",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "srimad_bhagavatam_1",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "srimad_bhagavatam_1",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_revised",
+      "target_book_id": "srimad_bhagavatam_1",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_revised",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_revised",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_2",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_author",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same author: A.C. Bhaktivedanta Swami Prabhupada"
+      ],
+      "metadata": {
+        "author": "A.C. Bhaktivedanta Swami Prabhupada"
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "sequel",
+      "confidence": 0.9,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same series: Srimad Bhagavatam"
+      ],
+      "metadata": {
+        "series": "Srimad Bhagavatam",
+        "source_number": 1,
+        "target_number": 2
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "same_series",
+      "confidence": 0.9,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same series: Srimad Bhagavatam"
+      ],
+      "metadata": {
+        "series": "Srimad Bhagavatam",
+        "source_number": 1,
+        "target_number": 3
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_2",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "sequel",
+      "confidence": 0.9,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Same series: Srimad Bhagavatam"
+      ],
+      "metadata": {
+        "series": "Srimad Bhagavatam",
+        "source_number": 2,
+        "target_number": 3
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_es",
+      "relationship_type": "translation",
+      "confidence": 0.9999999999999999,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Different languages: English vs Spanish",
+        "Translator information available",
+        "Original title information available"
+      ],
+      "metadata": {
+        "source_language": "English",
+        "target_language": "Spanish",
+        "translator": "Spanish Translation Team"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "translation",
+      "confidence": 0.95,
+      "confidence_level": "very_high",
+      "evidence": [
+        "Different languages: Spanish vs English",
+        "Translator information available",
+        "Original title information available"
+      ],
+      "metadata": {
+        "source_language": "Spanish",
+        "target_language": "English",
+        "translator": "Spanish Translation Team"
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "edition",
+      "confidence": 0.8999999999999999,
+      "confidence_level": "high",
+      "evidence": [
+        "Different publication years: 1972 vs 1983",
+        "Different editions: None vs Revised"
+      ],
+      "metadata": {
+        "source_edition": null,
+        "target_edition": "Revised",
+        "source_year": 1972,
+        "target_year": 1983
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_es",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.6115035580217925,
+      "confidence_level": "medium",
+      "evidence": [
+        "Thematic similarity score: 0.612",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Subject: Hindu Philosophy",
+        "Subject: Meditation"
+      ],
+      "metadata": {
+        "similarity_score": 0.6115035580217925,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Subject: Hindu Philosophy",
+          "Subject: Meditation"
+        ]
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_en",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.5289425368256139,
+      "confidence_level": "medium",
+      "evidence": [
+        "Thematic similarity score: 0.529",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Subject: Hindu Philosophy",
+        "Subject: Meditation"
+      ],
+      "metadata": {
+        "similarity_score": 0.5289425368256139,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Subject: Hindu Philosophy",
+          "Subject: Meditation"
+        ]
+      }
+    },
+    {
+      "source_book_id": "bhagavad_gita_es",
+      "target_book_id": "bhagavad_gita_revised",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.4715894151667583,
+      "confidence_level": "low",
+      "evidence": [
+        "Thematic similarity score: 0.472",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Subject: Hindu Philosophy",
+        "Subject: Meditation"
+      ],
+      "metadata": {
+        "similarity_score": 0.4715894151667583,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Subject: Hindu Philosophy",
+          "Subject: Meditation"
+        ]
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_2",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.5369345669612892,
+      "confidence_level": "medium",
+      "evidence": [
+        "Thematic similarity score: 0.537",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Category: Literature",
+        "Subject: Hindu Philosophy"
+      ],
+      "metadata": {
+        "similarity_score": 0.5369345669612892,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Category: Literature",
+          "Subject: Hindu Philosophy"
+        ]
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_1",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.6318662416262516,
+      "confidence_level": "medium",
+      "evidence": [
+        "Thematic similarity score: 0.632",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Category: Literature",
+        "Subject: Hindu Philosophy"
+      ],
+      "metadata": {
+        "similarity_score": 0.6318662416262516,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Category: Literature",
+          "Subject: Hindu Philosophy"
+        ]
+      }
+    },
+    {
+      "source_book_id": "srimad_bhagavatam_2",
+      "target_book_id": "srimad_bhagavatam_3",
+      "relationship_type": "thematic_similarity",
+      "confidence": 0.5080359034423974,
+      "confidence_level": "medium",
+      "evidence": [
+        "Thematic similarity score: 0.508",
+        "Category: Religion",
+        "Category: Philosophy",
+        "Category: Spirituality",
+        "Category: Literature",
+        "Subject: Hindu Philosophy"
+      ],
+      "metadata": {
+        "similarity_score": 0.5080359034423974,
+        "common_themes": [
+          "Category: Religion",
+          "Category: Philosophy",
+          "Category: Spirituality",
+          "Category: Literature",
+          "Subject: Hindu Philosophy"
+        ]
+      }
+    }
+  ],
+  "thematic_clusters": [
+    {
+      "cluster_id": "cluster_0_20250626",
+      "theme": "Books about Philosophy",
+      "books": [
+        "bhagavad_gita_en",
+        "bhagavad_gita_es",
+        "bhagavad_gita_revised"
+      ],
+      "keywords": [
+        "Krishna",
+        "Arjuna",
+        "dharma",
+        "karma",
+        "yoga",
+        "Philosophy",
+        "Religion",
+        "Spirituality",
+        "Hindu Philosophy",
+        "Yoga"
+      ],
+      "confidence": 0.5702230474237031
+    },
+    {
+      "cluster_id": "cluster_1_20250626",
+      "theme": "Books about Philosophy",
+      "books": [
+        "srimad_bhagavatam_1",
+        "srimad_bhagavatam_2",
+        "srimad_bhagavatam_3"
+      ],
+      "keywords": [
+        "Krishna",
+        "Vishnu",
+        "Vedic",
+        "Philosophy",
+        "Religion",
+        "Spirituality",
+        "Literature",
+        "Hindu Philosophy",
+        "Stories",
+        "Devotion"
+      ],
+      "confidence": 0.5844004042937704
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-06-26T20:34:30.000777",
+  "cache_stats": {
+    "total_assets": 3,
+    "total_size_mb": 0.12,
+    "asset_type_counts": {
+      "cover_image": 3,
+      "author_photo": 0,
+      "publisher_logo": 0,
+      "series_banner": 0,
+      "genre_icon": 0
+    },
+    "cache_dir": "/var/folders/vq/mx9429qs3wz3r9_s76w101140000gn/T/tmpz31fj0tt/asset_cache",
+    "registry_entities": 3
+  },
+  "entities": {
+    "bhagavad_gita": {
+      "entity_type": "book",
+      "primary_cover": "ddd121045f40413788adbe80495b877d",
+      "primary_author_photo": null,
+      "created_date": "2025-06-26T20:34:16.741871",
+      "updated_date": "2025-06-26T20:34:16.741886",
+      "assets": {
+        "cover_image": [
+          {
+            "asset_id": "ddd121045f40413788adbe80495b877d",
+            "source_url": "https://covers.openlibrary.org/b/id/240726-L.jpg",
+            "local_path": "/var/folders/vq/mx9429qs3wz3r9_s76w101140000gn/T/tmpz31fj0tt/asset_cache/covers/ddd121045f40413788adbe80495b877d_original.webp",
+            "width": 465,
+            "height": 475,
+            "file_size": 50473,
+            "format": "jpeg",
+            "quality": "original",
+            "checksum": "b086199843e8792ad70a353d8112ef15",
+            "download_date": "2025-06-26T20:34:16.615453",
+            "fallback_used": false,
+            "error_count": 0,
+            "last_error": null
+          }
+        ]
+      }
+    },
+    "thinking_fast_slow": {
+      "entity_type": "book",
+      "primary_cover": "030743091e82a870a8e524000a5c1eaa",
+      "primary_author_photo": null,
+      "created_date": "2025-06-26T20:34:21.333737",
+      "updated_date": "2025-06-26T20:34:21.333756",
+      "assets": {
+        "cover_image": [
+          {
+            "asset_id": "030743091e82a870a8e524000a5c1eaa",
+            "source_url": "https://covers.openlibrary.org/b/id/8482081-L.jpg",
+            "local_path": "/var/folders/vq/mx9429qs3wz3r9_s76w101140000gn/T/tmpz31fj0tt/asset_cache/covers/030743091e82a870a8e524000a5c1eaa_original.webp",
+            "width": 339,
+            "height": 500,
+            "file_size": 36710,
+            "format": "jpeg",
+            "quality": "original",
+            "checksum": "eba37a370a5798a884dc9e62969342a5",
+            "download_date": "2025-06-26T20:34:21.262486",
+            "fallback_used": false,
+            "error_count": 0,
+            "last_error": null
+          }
+        ]
+      }
+    },
+    "art_of_war": {
+      "entity_type": "book",
+      "primary_cover": "bfa7981036048578eed0e1b5c6564efb",
+      "primary_author_photo": null,
+      "created_date": "2025-06-26T20:34:23.863172",
+      "updated_date": "2025-06-26T20:34:23.863188",
+      "assets": {
+        "cover_image": [
+          {
+            "asset_id": "bfa7981036048578eed0e1b5c6564efb",
+            "source_url": "https://covers.openlibrary.org/b/id/8737734-L.jpg",
+            "local_path": "/var/folders/vq/mx9429qs3wz3r9_s76w101140000gn/T/tmpz31fj0tt/asset_cache/covers/bfa7981036048578eed0e1b5c6564efb_original.webp",
+            "width": 333,
+            "height": 500,
+            "file_size": 39386,
+            "format": "jpeg",
+            "quality": "original",
+            "checksum": "6ae01d0c3bdf6ada5bf22d0f0ad41809",
+            "download_date": "2025-06-26T20:34:23.796022",
+            "fallback_used": false,
+            "error_count": 0,
+            "last_error": null
+          }
+        ]
+      }
+    }
+  }
+}

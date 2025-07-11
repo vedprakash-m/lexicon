@@ -1,6 +1,6 @@
 # User Experience Design Document
 
-## Lexicon: Personal RAG Dataset Preparation Tool
+## Lexicon: Universal RAG Dataset Preparation Tool
 
 **Version:** 1.0  
 **Date:** June 25, 2025  
@@ -12,7 +12,7 @@
 ## 🎯 UX/UI Overview
 
 ### Design Philosophy
-**"Simplicity with Power"** - Lexicon follows a design philosophy that prioritizes ease of use while providing powerful capabilities for personal RAG dataset creation.
+**"Simplicity with Power"** - Lexicon follows a design philosophy that prioritizes ease of use while providing powerful capabilities for universal RAG dataset creation across any content domain.
 
 #### Core Design Principles
 
@@ -21,14 +21,14 @@
 3. **Native Mac Experience**: Feels like a natural part of the macOS ecosystem
 4. **Visual Progress Feedback**: Users always know what's happening and how long it will take
 5. **Error Prevention Over Recovery**: Design prevents errors rather than just handling them gracefully
-6. **Personal Workflow Integration**: Seamlessly fits into existing personal productivity workflows
+6. **Universal Workflow Integration**: Seamlessly fits into existing productivity workflows across any industry or content domain
 
 #### Target User Profile
-- **Primary User**: Technical enthusiast building personal RAG systems
+- **Primary User**: Developers, researchers, content creators, analysts building RAG systems
 - **Technical Level**: Comfortable with files, basic configuration, understands AI/ML concepts
-- **Use Context**: Personal knowledge curation, spiritual text processing, research organization
+- **Use Context**: Universal knowledge curation, content processing across all domains, research organization
 - **Hardware**: Mac users (MacBook Air M1 baseline, 8GB RAM minimum)
-- **Workflow**: Processes 20-50 books per month, builds multiple RAG projects
+- **Workflow**: Processes diverse content types, builds domain-specific RAG projects
 
 ---
 
@@ -144,8 +144,8 @@
 │    │                                                 │     │
 │    └─────────────────────────────────────────────────┘     │
 │                                                             │
-│    💡 Tip: Try with a spiritual text like Bhagavad Gita    │
-│        or a technical book you're learning from            │
+│    💡 Tip: Try with any content - technical docs, research papers,    │
+│        business reports, or books you're learning from            │
 │                                                             │
 │                                          [Continue →]      │
 └─────────────────────────────────────────────────────────────┘
@@ -169,7 +169,7 @@
 │                                                             │
 │                   ⚙️ Processing Configuration               │
 │                                                             │
-│    Choose how to process your book:                        │
+│    Choose how to process your content:                     │
 │                                                             │
 │    ┌─────────────────────────────────────────────────┐     │
 │    │ ◉ Smart Processing (Recommended)               │     │

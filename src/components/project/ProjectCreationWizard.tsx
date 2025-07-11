@@ -32,7 +32,7 @@ export function ProjectCreationWizard({ onComplete, onCancel }: ProjectCreationW
       title: 'Book Collection',
       description: 'Organize books by topic, genre, or purpose',
       icon: FolderOpen,
-      examples: ['Spiritual Texts', 'Philosophy Books', 'Technical References']
+      examples: ['Structured Scriptures', 'Philosophy Books', 'Technical References']
     },
     {
       id: 'processing',
@@ -52,7 +52,7 @@ export function ProjectCreationWizard({ onComplete, onCancel }: ProjectCreationW
 
   const templates = {
     collection: [
-      { id: 'spiritual', name: 'Spiritual Texts', description: 'Vedic literature, Buddhism, Christianity, etc.' },
+      { id: 'scripture', name: 'Structured Scriptures', description: 'Vedic literature, Buddhism, Christianity, etc.' },
       { id: 'philosophy', name: 'Philosophy', description: 'Western and Eastern philosophical works' },
       { id: 'technical', name: 'Technical Books', description: 'Programming, AI/ML, science' },
       { id: 'literature', name: 'Literature', description: 'Fiction, poetry, classic works' },
@@ -212,7 +212,7 @@ export function ProjectCreationWizard({ onComplete, onCancel }: ProjectCreationW
               <Label htmlFor="name">Project Name</Label>
               <Input
                 id="name"
-                placeholder="e.g., Spiritual Texts Collection"
+                placeholder="e.g., Structured Scriptures Collection"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               />

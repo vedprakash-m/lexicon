@@ -27,7 +27,7 @@ interface ProjectData {
 const mockProjects: Project[] = [
   {
     id: '1',
-    name: 'Spiritual Texts Collection',
+    name: 'Structured Scriptures Collection',
     description: 'Vedic literature and Eastern philosophy books for personal study',
     type: 'collection',
     status: 'active',

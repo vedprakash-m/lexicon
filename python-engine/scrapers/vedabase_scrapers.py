@@ -1,7 +1,7 @@
 """
 Vedabase.io Specialized Scrapers
 
-This module provides specialized scrapers for extracting spiritual texts from vedabase.io,
+This module provides specialized scrapers for extracting structured scriptures from vedabase.io,
 integrating with the core web scraping engine while preserving domain-specific knowledge
 of text structure and metadata.
 
@@ -72,7 +72,7 @@ class VerseContent:
 
 @dataclass
 class TextMetadata:
-    """Metadata for complete spiritual texts."""
+    """Metadata for complete structured scriptures."""
     
     text_name: str
     text_abbreviation: str  # BG, SB, ISO

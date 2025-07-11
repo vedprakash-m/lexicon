@@ -1,6 +1,7 @@
 import { Search, Plus, Settings, Bell } from 'lucide-react';
-import { Button, Input } from '../ui';
+import { Button, Input, TooltipWithShortcut } from '../ui';
 import { ThemeToggle } from '../ui/theme-toggle';
+import { SimpleHelpButton } from '../ui/simple-help-system';
 
 export function AppHeader() {
   return (
@@ -14,30 +15,52 @@ export function AppHeader() {
       </div>
 
       {/* Center section - Search */}
-      <div className="flex-1 max-w-md mx-8">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search books, collections..."
-            className="pl-10 h-9"
-          />
-        </div>
+      <div className="flex-1 max-w-md mx-8" data-tour="search">
+        <TooltipWithShortcut 
+          content="Search your library or press ⌘K for quick commands" 
+          shortcut="⌘K"
+        >
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search books, collections..."
+              className="pl-10 h-9"
+              data-tour="command-trigger"
+            />
+          </div>
+        </TooltipWithShortcut>
       </div>
 
       {/* Right section - Actions */}
       <div className="flex items-center space-x-2">
-        <Button variant="ghost" size="sm">
-          <Plus className="h-4 w-4" />
-          <span className="ml-2 hidden sm:inline">New</span>
-        </Button>
+        <TooltipWithShortcut 
+          content="Add new book or start a new project" 
+          shortcut="⌘N"
+        >
+          <Button variant="ghost" size="sm" data-tour="new-project">
+            <Plus className="h-4 w-4" />
+            <span className="ml-2 hidden sm:inline">New</span>
+          </Button>
+        </TooltipWithShortcut>
         
-        <Button variant="ghost" size="sm">
-          <Bell className="h-4 w-4" />
-        </Button>
+        <TooltipWithShortcut 
+          content="View notifications and processing updates"
+        >
+          <Button variant="ghost" size="sm">
+            <Bell className="h-4 w-4" />
+          </Button>
+        </TooltipWithShortcut>
         
-        <Button variant="ghost" size="sm">
-          <Settings className="h-4 w-4" />
-        </Button>
+        <TooltipWithShortcut 
+          content="Open application settings" 
+          shortcut="⌘,"
+        >
+          <Button variant="ghost" size="sm">
+            <Settings className="h-4 w-4" />
+          </Button>
+        </TooltipWithShortcut>
+        
+        <SimpleHelpButton />
         
         <ThemeToggle />
       </div>

@@ -248,6 +248,11 @@ export const useLexiconStore = create<LexiconStore>()(
         });
       },
 
+      // Reset entire store to initial state
+      reset: () => {
+        set(() => ({ ...initialState }));
+      },
+
       // Undo/Redo actions
       undo: () => {
         set((state) => {
@@ -406,6 +411,23 @@ export const useLexiconStore = create<LexiconStore>()(
         set((state) => {
           state.error = error;
         });
+      },
+
+      clearError: () => {
+        set((state) => {
+          state.error = null;
+        });
+      },
+
+      // Getter methods for active items
+      getActiveSourceText: () => {
+        const state = get();
+        return state.activeSourceTextId ? state.sourceTexts[state.activeSourceTextId] : null;
+      },
+
+      getActiveDataset: () => {
+        const state = get();
+        return state.activeDatasetId ? state.datasets[state.activeDatasetId] : null;
       },
     })),
     {

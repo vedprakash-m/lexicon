@@ -197,7 +197,7 @@ class TestCompletenessAssessor(unittest.TestCase):
         self.assertEqual(metrics.section_count, 3)
     
     def test_spiritual_text_assessment(self):
-        """Test spiritual text specific assessment."""
+        """Test structured scripture specific assessment."""
         spiritual_text = """
         Bhagavad Gita 2.47
         
@@ -483,7 +483,7 @@ class TestQualityAnalysisEngine(unittest.TestCase):
             pass
     
     def test_spiritual_text_analysis(self):
-        """Test analysis specifically for spiritual texts."""
+        """Test analysis specifically for structured scriptures."""
         spiritual_text = """
         Bhagavad Gita Chapter 18, Verse 66
         

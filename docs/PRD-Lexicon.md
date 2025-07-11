@@ -12,13 +12,13 @@
 ## 🎯 Executive Summary
 
 ### Vision Statement
-**Lexicon** is a personal data ingestion and preparation tool that transforms books and documents from various formats into high-quality, structured datasets for personal RAG (Retrieval-Augmented Generation) projects, with a focus on spiritual texts, philosophy, and AI/ML resources.
+**Lexicon** is a universal data ingestion and preparation tool that transforms books and documents from any domain into high-quality, structured datasets for personal RAG (Retrieval-Augmented Generation) projects, supporting content from technical documentation to literature, business documents to religious texts.
 
 ### Mission
-Streamline personal content curation by automating the extraction, processing, and chunking of books and documents into consistent, RAG-ready datasets that serve as knowledge bases for personal AI agent projects.
+Streamline universal content curation by automating the extraction, processing, and chunking of any text content into consistent, RAG-ready datasets that serve as knowledge bases for personal AI agent projects across all domains and industries.
 
 ### Product Name: Lexicon
-**"Lexicon"** represents a personal knowledge vocabulary builder - transforming your content collection into intelligent, searchable datasets that empower your AI agents with curated domain expertise.
+**"Lexicon"** represents a universal knowledge vocabulary builder - transforming any content collection into intelligent, searchable datasets that empower your AI agents with curated domain expertise across all text types and industries.
 
 ### Success Criteria
 - **Personal Scale**: Process 100-500 books efficiently for personal use
@@ -43,30 +43,35 @@ Streamline personal content curation by automating the extraction, processing, a
 2. **Format Inconsistency**: Personal content collection spans PDFs, EPUBs, web sources requiring different extraction approaches
 3. **Quality Variability**: Manual chunking leads to inconsistent quality across different documents
 4. **Time Investment**: Each new RAG project requires weeks of data preparation
-5. **Domain-Specific Needs**: Spiritual texts, philosophy, and technical books need specialized processing approaches
+5. **Universal Content Support**: Technical documentation, academic papers, business documents, literature, legal texts, medical content, educational materials, web content, and religious texts all need specialized yet unified processing approaches
 6. **Repetitive Workflows**: Similar processing steps repeated for each new book or project
 
 ### Primary Use Cases
-- **Personal RAG Projects**: Building knowledge bases for spiritual guidance, philosophy exploration, and AI/ML learning
-- **Content Curation**: Processing personal library of spiritual texts (Bhagavad Gita, Srimad Bhagavatam, Isopanisad)
-- **Research Organization**: Structuring academic and technical content for easy retrieval
-- **AI Agent Training**: Creating domain-specific datasets for personal AI assistants
-- **Knowledge Management**: Maintaining personal digital library in RAG-ready formats
+- **Technical Documentation**: Processing API docs, user manuals, specifications, and technical guides for development RAG systems
+- **Academic Research**: Structuring research papers, journals, dissertations, and academic publications for scholarly analysis
+- **Business Intelligence**: Processing reports, contracts, policies, and business documents for organizational knowledge bases
+- **Literature & Creative Works**: Analyzing novels, poetry, essays, and creative content for literary research and analysis
+- **Legal Document Processing**: Structuring legal cases, statutes, regulations, and legal commentary for legal research
+- **Medical & Scientific Content**: Processing research papers, clinical guidelines, and medical literature for healthcare applications
+- **Educational Materials**: Organizing textbooks, course content, and educational resources for learning management systems
+- **Web Content Curation**: Processing articles, blogs, wikis, and online content for information management
+- **Religious & Philosophical Texts**: Traditional scripture study, philosophical treatises, and commentary analysis
+- **Personal Knowledge Management**: Maintaining universal digital library in RAG-ready formats across all content types
 
 ### Current Personal Workflow Limitations
-- **Existing Scripture Scrapers**: Manual, one-off solutions for specific sources (BG, SB, ISO scrapers)
-- **Generic Tools**: LangChain/LlamaIndex document loaders lack domain awareness for spiritual texts
-- **Manual Chunking**: Time-intensive process with inconsistent results
-- **Storage Complexity**: No unified approach for organizing processed content
+- **Domain-Specific Tools**: Existing solutions are often limited to specific content types (scripture scrapers, academic paper processors, etc.)
+- **Generic Tools**: LangChain/LlamaIndex document loaders lack intelligent content awareness for different text types and structures
+- **Manual Chunking**: Time-intensive process with inconsistent results across different content domains
+- **Storage Complexity**: No unified approach for organizing processed content from diverse sources and formats
 
-**Lexicon's Personal Value**: Unified personal tool for transforming any content into consistent, high-quality RAG datasets with domain-aware processing.
+**Lexicon's Universal Value**: Unified tool for transforming ANY content type into consistent, high-quality RAG datasets with intelligent content-aware processing.
 
 ---
 
 ## 🏗️ Product Architecture
 
 ### Core Value Proposition
-**"Lexicon: Personal RAG dataset preparation tool for transforming your content collection into AI-ready knowledge bases"**
+**"Lexicon: Universal RAG dataset preparation tool for transforming any text content into AI-ready knowledge bases"**
 
 ### Lexicon 3-Stage Pipeline Architecture
 
@@ -80,18 +85,18 @@ Streamline personal content curation by automating the extraction, processing, a
 ⬇️
 
 🔄 STAGE 2: LOCAL INGESTION (Processing Engine)
-├── Multi-format content extraction (PDF, EPUB, Web)
-├── Domain-aware structure recognition (spiritual texts focus)
-├── Quality validation and text cleanup
+├── Multi-format content extraction (PDF, EPUB, Web, DOC, HTML, Markdown)
+├── Intelligent content structure recognition (universal content types)
+├── Quality validation and text cleanup for any content domain
 └── Personal cloud storage integration
 
 ⬇️
 
-📊 STAGE 3: RULE-BASED CHUNKING (Export System)
+📊 STAGE 3: INTELLIGENT CHUNKING (Export System)
 ├── Standard size-based chunking with smart boundaries
-├── Domain-aware chunking (verses, chapters, sections)
-├── Simple quality scoring without AI dependencies
-└── Multi-format export (JSON, JSONL, CSV, Parquet)
+├── Content-aware chunking (sections, chapters, procedures, articles, verses)
+├── Universal quality scoring without AI dependencies
+└── Multi-format export (JSON, JSONL, CSV, Parquet, Markdown)
 ```
 
 ---
@@ -102,7 +107,7 @@ Streamline personal content curation by automating the extraction, processing, a
 
 #### FR1: Personal Content Catalog
 - **FR1.1**: Add books/documents via drag-and-drop with basic metadata
-- **FR1.2**: Support personal categories (spiritual texts, philosophy, AI/ML, personal development)
+- **FR1.2**: Support universal categories (technical docs, academic papers, business content, literature, legal texts, medical content, educational materials, web content, religious texts, philosophy)
 - **FR1.3**: Track processing status (todo → processing → completed)
 - **FR1.4**: Simple versioning and reprocessing capabilities
 - **FR1.5**: Import existing book collections from CSV/JSON
@@ -127,24 +132,24 @@ Streamline personal content curation by automating the extraction, processing, a
 ### Stage 2: Local Ingestion System
 
 #### FR4: Personal Content Extraction
-- **FR4.1**: Web scraping for key personal sources (Vedabase, Archive.org, Gutenberg)
+- **FR4.1**: Web scraping for diverse content sources (academic repositories, technical documentation sites, news sites, content management systems, digital libraries)
 - **FR4.2**: PDF processing with multiple extraction engines and basic OCR
 - **FR4.3**: EPUB/MOBI extraction with metadata preservation
-- **FR4.4**: Integration with existing personal scrapers (BG, SB, ISO)
+- **FR4.4**: Integration with existing content processing tools and universal content importers
 - **FR4.5**: Manual file upload with drag-and-drop validation
 - **FR4.6**: Sequential processing with progress tracking
 - **FR4.7**: Personal cloud storage backup integration
 
 #### FR5: Content Structure Recognition
-- **FR5.1**: Rule-based chapter/section detection with domain-specific patterns
-- **FR5.2**: Table of contents extraction and validation
-- **FR5.3**: Footnote and citation preservation
-- **FR5.4**: Basic image handling (OCR for text content)
-- **FR5.5**: Multi-language content support for personal collection
-- **FR5.6**: Spiritual text structure recognition (verses, mantras, chapters)
-- **FR5.7**: Basic metadata extraction and personal tagging
-- **FR5.8**: Sanskrit transliteration support (IAST, Devanagari standards)
-- **FR5.9**: Cross-translation verse alignment for comparative analysis
+- **FR5.1**: Rule-based chapter/section detection with universal content pattern recognition
+- **FR5.2**: Table of contents extraction and validation for any document type
+- **FR5.3**: Footnote and citation preservation across academic and technical content
+- **FR5.4**: Basic image handling (OCR for text content, diagram recognition)
+- **FR5.5**: Multi-language content support for global content collection
+- **FR5.6**: Universal content structure recognition (technical sections, academic citations, legal clauses, medical procedures, verses, articles)
+- **FR5.7**: Basic metadata extraction and intelligent tagging for any content type
+- **FR5.8**: Multi-script support (Latin, Cyrillic, Arabic, Chinese, Devanagari, etc.)
+- **FR5.9**: Cross-document relationship detection for comparative analysis
 - **FR5.10**: Unique document identification with stable UUIDs for reprocessing
 
 #### FR6: Quality Validation & Enhancement
@@ -167,11 +172,14 @@ Streamline personal content curation by automating the extraction, processing, a
 - **FR6.8.3**: Format artifact removal (clean PDF conversion artifacts, OCR errors, formatting remnants)
 - **FR6.8.4**: Noise filtering (remove advertisements, unrelated sidebars, formatting-only content)
 
-##### FR6.9: Domain-Specific Cleaning
-- **FR6.9.1**: Spiritual text cleaning (preserve verse numbers, remove repetitive headers/footers)
+##### FR6.9: Universal Content Cleaning
+- **FR6.9.1**: Technical document cleaning (preserve code blocks, preserve technical formatting, remove navigation elements)
 - **FR6.9.2**: Academic paper cleaning (handle citations, footnotes, bibliography sections appropriately)
-- **FR6.9.3**: Technical book cleaning (preserve code blocks, diagrams references, technical formatting)
+- **FR6.9.3**: Business document cleaning (preserve structure, remove headers/footers, maintain formatting)
 - **FR6.9.4**: Web content cleaning (remove navigation, ads, comments, social media widgets)
+- **FR6.9.5**: Legal document cleaning (preserve legal structure, maintain citations, preserve formatting)
+- **FR6.9.6**: Medical content cleaning (preserve medical terminology, maintain structure, preserve references)
+- **FR6.9.7**: Religious text cleaning (preserve verse numbers, remove repetitive headers/footers, maintain original language text)
 
 ##### FR6.10: Quality Assurance Cleaning
 - **FR6.10.1**: Content density analysis (identify and flag low-content sections)
@@ -188,7 +196,7 @@ Streamline personal content curation by automating the extraction, processing, a
 - **FR6.11.6**: Visual asset management (cover images, author photos, publisher logos)
 - **FR6.11.7**: Book relationship mapping (translations, editions, related works)
 - **FR6.11.8**: Enhanced catalog interface with rich visual and metadata display
-- **FR6.11.9**: Cross-text analysis support for comparative studies (especially Vedic translations)
+- **FR6.11.9**: Cross-text analysis support for comparative studies (especially scripture translations and commentaries)
 - **FR6.11.10**: Recommendation system for related content discovery
 
 ### Stage 3: Rule-Based Chunking System
@@ -197,7 +205,7 @@ Streamline personal content curation by automating the extraction, processing, a
 - **FR7.1**: Standard chunking (configurable size-based splitting with smart overlap)
 - **FR7.2**: Boundary-aware chunking (sentence, paragraph, section boundaries)
 - **FR7.3**: Domain-aware chunking with practical examples:
-  - *Spiritual texts*: Preserve verse boundaries (BG 2.47), maintain complete mantras, keep chapter introductions intact
+  - *Structured scriptures*: Preserve verse boundaries (BG 2.47, Quran 2:255, Psalms 23:1), maintain complete units with original language + translation + commentary
   - *Philosophy*: Preserve complete arguments and logical sequences, maintain dialogue structures
   - *Technical content*: Keep code examples together, preserve step-by-step procedures, maintain diagram references
 - **FR7.4**: Structure-based chunking (chapters, verses, sections as natural boundaries)
@@ -281,7 +289,7 @@ Streamline personal content curation by automating the extraction, processing, a
 
 ### Configuration Management (Personal Focus)
 - **UX11**: Simple configuration with sensible defaults
-- **UX12**: Processing profiles for personal content types (spiritual texts, philosophy, technical)
+- **UX12**: Processing profiles for personal content types (structured scriptures, classical texts, philosophy, technical)
 - **UX13**: Personal customization options without complex plugin systems
 - **UX14**: Single-user configuration management
 - **UX15**: Configuration backup and restore for personal settings
@@ -367,7 +375,7 @@ Streamline personal content curation by automating the extraction, processing, a
 
 #### Week 4: Advanced Processing
 - Add OCR support for scanned PDFs
-- Implement domain-aware chunking for spiritual texts
+- Implement domain-aware chunking for structured scriptures
 - Enhance web scraping capabilities
 - Add batch processing support
 
@@ -392,7 +400,7 @@ Streamline personal content curation by automating the extraction, processing, a
 #### Week 7: Performance & Reliability
 - Optimize processing performance for personal use scale
 - Complete book enrichment integration
-- Add relationship mapping for spiritual text collections
+- Add relationship mapping for structured scripture collections
 - Implement visual browsing modes
 
 #### Week 8: Advanced Enrichment Features
@@ -473,7 +481,7 @@ Streamline personal content curation by automating the extraction, processing, a
 ### Data Quality Risks
 - **Inconsistent Content**: Some books may consistently produce poor quality chunks despite rule-based efforts
   - *Mitigation*: Quality scoring thresholds, manual review interface, iterative improvement
-- **Domain Variations**: Spiritual texts from different traditions may require unique handling
+- **Domain Variations**: Structured scriptures from different traditions may require unique handling
   - *Mitigation*: Configurable profiles, manual override options, incremental learning
 
 ### Personal Use Risks

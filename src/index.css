@@ -57,3 +57,200 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Accessibility Enhancements */
+@layer utilities {
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* Enhanced focus indicators */
+  .focus-visible\:ring-enhanced:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .contrast-enhanced {
+      border-color: CanvasText;
+      background-color: Canvas;
+      color: CanvasText;
+    }
+    
+    .contrast-enhanced:focus {
+      outline: 2px solid CanvasText;
+      outline-offset: 2px;
+    }
+  }
+
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Ensure minimum touch targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Skip link styling */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 6px;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 8px;
+    border-radius: 4px;
+    text-decoration: none;
+    transition: top 0.3s;
+    z-index: 1000;
+  }
+
+  .skip-link:focus {
+    top: 6px;
+  }
+}
+
+/* Tour highlighting styles */
+.tour-highlight {
+  position: relative;
+  z-index: 45;
+  box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 4px rgba(99, 102, 241, 0.2);
+  border-radius: 4px;
+  animation: tour-pulse 2s infinite;
+}
+
+@keyframes tour-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 4px rgba(99, 102, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 8px rgba(99, 102, 241, 0.4);
+  }
+}
+
+/* Onboarding overlay styles */
+.onboarding-overlay {
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Welcome wizard animation */
+.welcome-wizard-enter {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.welcome-wizard-enter-active {
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* Progressive disclosure hints */
+.feature-hint {
+  position: relative;
+}
+
+.feature-hint::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 8px;
+  height: 8px;
+  background: theme(colors.primary.DEFAULT);
+  border-radius: 50%;
+  animation: hint-pulse 2s infinite;
+}
+
+@keyframes hint-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+/* Help search highlighting */
+.help-search-highlight {
+  background-color: theme(colors.yellow.200);
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
+/* Smooth scroll for tour navigation */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Tour tooltip animations */
+.tour-tooltip {
+  animation: tour-tooltip-enter 0.3s ease-out;
+}
+
+@keyframes tour-tooltip-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Sample project cards hover effects */
+.sample-project-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.sample-project-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Accessibility improvements for onboarding */
+@media (prefers-reduced-motion: reduce) {
+  .tour-highlight,
+  .feature-hint::after,
+  .tour-tooltip {
+    animation: none;
+  }
+  
+  .sample-project-card:hover {
+    transform: none;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .tour-highlight {
+    box-shadow: 0 0 0 3px theme(colors.yellow.400), 0 0 0 6px theme(colors.black);
+  }
+  
+  .feature-hint::after {
+    background: theme(colors.yellow.400);
+    border: 1px solid theme(colors.black);
+  }
+}

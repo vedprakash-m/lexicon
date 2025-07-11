@@ -148,7 +148,7 @@ def test_quality_assessment():
     with appropriate paragraph breaks and clear structure.
     
     The text has good readability and content density. It demonstrates the kind of
-    quality that we expect from processed spiritual texts.
+    quality that we expect from processed structured scriptures.
     """
     
     # Test with poor quality text
@@ -171,12 +171,12 @@ def test_quality_assessment():
         return False
 
 
-def test_spiritual_text_processing():
-    """Test processing of spiritual text content."""
-    print("\nTesting spiritual text processing...")
+def test_structured_scripture_processing():
+    """Test processing of structured scripture content."""
+    print("\nTesting structured scripture processing...")
     
     # Sample Bhagavad Gita verse with HTML
-    spiritual_html = """
+    scripture_html = """
     <div class="verse">
         <h2>Bg. 2.47</h2>
         <div class="sanskrit">
@@ -199,23 +199,23 @@ def test_spiritual_text_processing():
     </div>
     """
     
-    # Test with spiritual-specific configuration
-    result = process_single_text(spiritual_html, "html")
+    # Test with scripture-specific configuration
+    result = process_single_text(scripture_html, "html")
     processed_text = result['processed_text']
     metrics = result['quality_metrics']
     
-    # Check that spiritual content is preserved
+    # Check that scripture content is preserved
     if ("कर्मण्येवाधिकारस्ते" in processed_text and  # Sanskrit preserved
         "karmaṇi" in processed_text and  # Transliteration preserved
         "You have a right" in processed_text and  # Translation preserved
         "Purport" in processed_text and  # Structure preserved
         metrics and metrics['sanskrit_verse_count'] > 0):
-        print("✓ Spiritual text processing working correctly")
+        print("✓ Structured scripture processing working correctly")
         print(f"Sanskrit verses detected: {metrics['sanskrit_verse_count']}")
         print(f"Has structured content: {metrics['has_structured_content']}")
         return True
     else:
-        print("✗ Spiritual text processing failed")
+        print("✗ Structured scripture processing failed")
         print(f"Processed text sample: {processed_text[:200]}...")
         return False
 
@@ -321,7 +321,7 @@ def main():
         test_text_normalization,
         test_language_detection,
         test_quality_assessment,
-        test_spiritual_text_processing,
+        test_structured_scripture_processing,
         test_convenience_functions,
         test_batch_processing,
         test_statistics_tracking

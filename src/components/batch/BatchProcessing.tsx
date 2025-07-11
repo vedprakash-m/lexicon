@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -25,157 +25,61 @@ import {
   TabPanel,
   Dialog
 } from '../ui';
-
-interface BatchJob {
-  id: string;
-  name: string;
-  description: string;
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  status: 'pending' | 'queued' | 'running' | 'paused' | 'completed' | 'failed' | 'cancelled';
-  sourceCount: number;
-  completedSources: number;
-  totalPages: number;
-  processedPages: number;
-  startTime?: Date;
-  endTime?: Date;
-  estimatedDuration?: number; // minutes
-  parallelSources: boolean;
-  parallelPages: boolean;
-}
-
-interface ResourceUsage {
-  cpuPercent: number;
-  memoryPercent: number;
-  memoryMb: number;
-  activeProcesses: number;
-}
-
-interface SystemStatus {
-  processorRunning: boolean;
-  resourceUsage: ResourceUsage;
-  resourceLimits: {
-    maxCpuCores: number;
-    maxMemoryMb: number;
-    maxConcurrentJobs: number;
-  };
-  queueStatus: {
-    queuedJobs: number;
-    activeJobs: number;
-    completedJobs: number;
-  };
-  shouldThrottle: boolean;
-}
-
-// Mock data for development
-const mockJobs: BatchJob[] = [
-  {
-    id: '1',
-    name: 'Complete Vedabase Collection',
-    description: 'Process all Vedabase.io texts including Bhagavad Gita, Srimad Bhagavatam, and Upanishads',
-    priority: 'high',
-    status: 'running',
-    sourceCount: 12,
-    completedSources: 8,
-    totalPages: 2847,
-    processedPages: 1923,
-    startTime: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-    parallelSources: true,
-    parallelPages: false,
-    estimatedDuration: 45
-  },
-  {
-    id: '2',
-    name: 'Philosophy Collection Batch',
-    description: 'Process modern philosophy texts from various sources',
-    priority: 'normal',
-    status: 'queued',
-    sourceCount: 6,
-    completedSources: 0,
-    totalPages: 1450,
-    processedPages: 0,
-    parallelSources: false,
-    parallelPages: true,
-    estimatedDuration: 120
-  },
-  {
-    id: '3',
-    name: 'Classical Literature Archive',
-    description: 'Historical and classical literature processing',
-    priority: 'low',
-    status: 'completed',
-    sourceCount: 8,
-    completedSources: 8,
-    totalPages: 1200,
-    processedPages: 1200,
-    startTime: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    endTime: new Date(Date.now() - 1 * 60 * 60 * 1000),
-    parallelSources: true,
-    parallelPages: true
-  }
-];
-
-const mockSystemStatus: SystemStatus = {
-  processorRunning: true,
-  resourceUsage: {
-    cpuPercent: 68.5,
-    memoryPercent: 72.3,
-    memoryMb: 5832,
-    activeProcesses: 847
-  },
-  resourceLimits: {
-    maxCpuCores: 8,
-    maxMemoryMb: 8192,
-    maxConcurrentJobs: 4
-  },
-  queueStatus: {
-    queuedJobs: 3,
-    activeJobs: 1,
-    completedJobs: 12
-  },
-  shouldThrottle: false
-};
+import { useBatchProcessing, type BatchJob, type SystemStatus } from '@/hooks/useBatchProcessing';
 
 export function BatchProcessing() {
-  const [jobs, setJobs] = useState<BatchJob[]>(mockJobs);
-  const [systemStatus, setSystemStatus] = useState<SystemStatus>(mockSystemStatus);
+  const { 
+    jobs, 
+    systemStatus, 
+    loading, 
+    error,
+    pauseJob,
+    resumeJob,
+    cancelJob,
+    exportJobResults
+  } = useBatchProcessing();
+  
   const [showJobDialog, setShowJobDialog] = useState(false);
   const [selectedTab, setSelectedTab] = useState(0);
 
-  // Simulate real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setJobs(currentJobs => 
-        currentJobs.map(job => {
-          if (job.status === 'running') {
-            const progress = Math.min(job.processedPages + Math.floor(Math.random() * 10), job.totalPages);
-            const sourceProgress = Math.min(
-              job.completedSources + (progress === job.totalPages ? 1 : 0), 
-              job.sourceCount
-            );
-            return {
-              ...job,
-              processedPages: progress,
-              completedSources: sourceProgress,
-              status: progress === job.totalPages ? 'completed' : 'running'
-            };
-          }
-          return job;
-        })
-      );
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading batch processing data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-      // Update system status
-      setSystemStatus(current => ({
-        ...current,
-        resourceUsage: {
-          ...current.resourceUsage,
-          cpuPercent: Math.max(30, Math.min(90, current.resourceUsage.cpuPercent + (Math.random() - 0.5) * 10)),
-          memoryPercent: Math.max(40, Math.min(85, current.resourceUsage.memoryPercent + (Math.random() - 0.5) * 5))
-        }
-      }));
-    }, 2000);
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto" />
+            <p className="mt-4 text-muted-foreground">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-    return () => clearInterval(interval);
-  }, []);
+  if (!systemStatus) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto" />
+            <p className="mt-4 text-muted-foreground">System status not available</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -229,12 +133,12 @@ export function BatchProcessing() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">CPU Usage</p>
-              <p className="text-2xl font-bold">{systemStatus.resourceUsage.cpuPercent.toFixed(1)}%</p>
+              <p className="text-2xl font-bold">{systemStatus?.resourceUsage?.cpuPercent?.toFixed(1) || '0'}%</p>
             </div>
-            <Cpu className={`h-8 w-8 ${systemStatus.resourceUsage.cpuPercent > 80 ? 'text-red-500' : 'text-blue-500'}`} />
+            <Cpu className={`h-8 w-8 ${(systemStatus?.resourceUsage?.cpuPercent || 0) > 80 ? 'text-red-500' : 'text-blue-500'}`} />
           </div>
           <Progress 
-            value={systemStatus.resourceUsage.cpuPercent} 
+            value={systemStatus?.resourceUsage?.cpuPercent || 0} 
             className="mt-2"
           />
         </Card>
@@ -243,12 +147,12 @@ export function BatchProcessing() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Memory Usage</p>
-              <p className="text-2xl font-bold">{systemStatus.resourceUsage.memoryPercent.toFixed(1)}%</p>
+              <p className="text-2xl font-bold">{systemStatus?.resourceUsage?.memoryPercent?.toFixed(1) || '0'}%</p>
             </div>
-            <HardDrive className={`h-8 w-8 ${systemStatus.resourceUsage.memoryPercent > 80 ? 'text-red-500' : 'text-green-500'}`} />
+            <HardDrive className={`h-8 w-8 ${(systemStatus?.resourceUsage?.memoryPercent || 0) > 80 ? 'text-red-500' : 'text-green-500'}`} />
           </div>
           <Progress 
-            value={systemStatus.resourceUsage.memoryPercent} 
+            value={systemStatus?.resourceUsage?.memoryPercent || 0} 
             className="mt-2"
           />
         </Card>
@@ -257,12 +161,12 @@ export function BatchProcessing() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-muted-foreground">Active Jobs</p>
-              <p className="text-2xl font-bold">{systemStatus.queueStatus.activeJobs}</p>
+              <p className="text-2xl font-bold">{systemStatus?.queueStatus?.activeJobs || 0}</p>
             </div>
             <Users className="h-8 w-8 text-purple-500" />
           </div>
           <div className="text-xs text-muted-foreground mt-2">
-            {systemStatus.queueStatus.queuedJobs} queued
+            {systemStatus?.queueStatus?.queuedJobs || 0} queued
           </div>
         </Card>
 
@@ -271,12 +175,12 @@ export function BatchProcessing() {
             <div>
               <p className="text-sm font-medium text-muted-foreground">System Status</p>
               <p className="text-lg font-semibold text-green-600">
-                {systemStatus.processorRunning ? 'Running' : 'Stopped'}
+                {systemStatus?.processorRunning ? 'Running' : 'Stopped'}
               </p>
             </div>
-            <Zap className={`h-8 w-8 ${systemStatus.processorRunning ? 'text-green-500' : 'text-red-500'}`} />
+            <Zap className={`h-8 w-8 ${systemStatus?.processorRunning ? 'text-green-500' : 'text-red-500'}`} />
           </div>
-          {systemStatus.shouldThrottle && (
+          {systemStatus?.shouldThrottle && (
             <Badge variant="destructive" className="mt-2 text-xs">
               Throttled
             </Badge>
@@ -299,9 +203,9 @@ export function BatchProcessing() {
             {activeJobs.length === 0 ? (
               <Card className="p-8 text-center">
                 <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No Active Jobs</h3>
+                <h3 className="text-lg font-semibold mb-2">no active jobs</h3>
                 <p className="text-muted-foreground mb-4">
-                  Start a new batch job to see it here.
+                  create a new batch job to see it here.
                 </p>
                 <Button onClick={() => setShowJobDialog(true)}>
                   <Play className="h-4 w-4 mr-2" />
@@ -337,21 +241,21 @@ export function BatchProcessing() {
                     <div>
                       <p className="text-sm font-medium mb-1">Sources Progress</p>
                       <Progress 
-                        value={(job.completedSources / job.sourceCount) * 100} 
+                        value={job.sourceCount ? ((job.completedSources || 0) / job.sourceCount) * 100 : 0} 
                         className="mb-1"
                       />
                       <p className="text-xs text-muted-foreground">
-                        {job.completedSources} of {job.sourceCount} sources
+                        {job.completedSources || 0} of {job.sourceCount || 0} sources
                       </p>
                     </div>
                     <div>
                       <p className="text-sm font-medium mb-1">Pages Progress</p>
                       <Progress 
-                        value={(job.processedPages / job.totalPages) * 100} 
+                        value={job.totalPages ? ((job.processedPages || 0) / job.totalPages) * 100 : 0} 
                         className="mb-1"
                       />
                       <p className="text-xs text-muted-foreground">
-                        {job.processedPages.toLocaleString()} of {job.totalPages.toLocaleString()} pages
+                        {(job.processedPages || 0).toLocaleString()} of {(job.totalPages || 0).toLocaleString()} pages
                       </p>
                     </div>
                   </div>
@@ -371,18 +275,30 @@ export function BatchProcessing() {
                     
                     <div className="flex items-center space-x-2">
                       {job.status === 'running' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => pauseJob(job.id)}
+                        >
                           <Pause className="h-4 w-4 mr-2" />
                           Pause
                         </Button>
                       )}
                       {job.status === 'paused' && (
-                        <Button variant="outline" size="sm">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => resumeJob(job.id)}
+                        >
                           <Play className="h-4 w-4 mr-2" />
                           Resume
                         </Button>
                       )}
-                      <Button variant="outline" size="sm">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => cancelJob(job.id)}
+                      >
                         <Square className="h-4 w-4 mr-2" />
                         Stop
                       </Button>
@@ -411,7 +327,7 @@ export function BatchProcessing() {
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-3 gap-4 mb-4">
                   <div>
                     <p className="text-sm font-medium">Success Rate</p>
                     <p className="text-2xl font-bold text-green-600">
@@ -429,9 +345,21 @@ export function BatchProcessing() {
                   </div>
                   <div>
                     <p className="text-sm font-medium">Pages Processed</p>
-                    <p className="text-lg">{job.processedPages.toLocaleString()}</p>
+                    <p className="text-lg">{job.processedPages?.toLocaleString() || '0'}</p>
                   </div>
                 </div>
+
+                {job.status === 'completed' && (
+                  <div className="flex justify-end">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => exportJobResults(job.id, 'json')}
+                    >
+                      Export
+                    </Button>
+                  </div>
+                )}
               </Card>
             ))}
           </TabPanel>
@@ -446,15 +374,15 @@ export function BatchProcessing() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Max Concurrent Jobs:</span>
-                      <span className="font-medium">{systemStatus.resourceLimits.maxConcurrentJobs}</span>
+                      <span className="font-medium">{systemStatus?.resourceLimits?.maxConcurrentJobs || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Max CPU Cores:</span>
-                      <span className="font-medium">{systemStatus.resourceLimits.maxCpuCores}</span>
+                      <span className="font-medium">{systemStatus?.resourceLimits?.maxCpuCores || 'N/A'}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Max Memory:</span>
-                      <span className="font-medium">{systemStatus.resourceLimits.maxMemoryMb} MB</span>
+                      <span className="font-medium">{systemStatus?.resourceLimits?.maxMemoryMb || 'N/A'} MB</span>
                     </div>
                   </div>
                 </div>
@@ -463,15 +391,15 @@ export function BatchProcessing() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span>Queued Jobs:</span>
-                      <span className="font-medium">{systemStatus.queueStatus.queuedJobs}</span>
+                      <span className="font-medium">{systemStatus?.queueStatus?.queuedJobs || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Active Jobs:</span>
-                      <span className="font-medium">{systemStatus.queueStatus.activeJobs}</span>
+                      <span className="font-medium">{systemStatus?.queueStatus?.activeJobs || 0}</span>
                     </div>
                     <div className="flex justify-between">
                       <span>Completed Jobs:</span>
-                      <span className="font-medium">{systemStatus.queueStatus.completedJobs}</span>
+                      <span className="font-medium">{systemStatus?.queueStatus?.completedJobs || 0}</span>
                     </div>
                   </div>
                 </div>
@@ -486,16 +414,16 @@ export function BatchProcessing() {
               <div className="space-y-4">
                 <div>
                   <h4 className="font-medium mb-2">CPU Usage</h4>
-                  <Progress value={systemStatus.resourceUsage.cpuPercent} className="mb-1" />
+                  <Progress value={systemStatus?.resourceUsage?.cpuPercent || 0} className="mb-1" />
                   <p className="text-sm text-muted-foreground">
-                    {systemStatus.resourceUsage.cpuPercent.toFixed(1)}% of {systemStatus.resourceLimits.maxCpuCores} cores
+                    {(systemStatus?.resourceUsage?.cpuPercent || 0).toFixed(1)}% of {systemStatus?.resourceLimits?.maxCpuCores || 0} cores
                   </p>
                 </div>
                 <div>
                   <h4 className="font-medium mb-2">Memory Usage</h4>
-                  <Progress value={systemStatus.resourceUsage.memoryPercent} className="mb-1" />
+                  <Progress value={systemStatus?.resourceUsage?.memoryPercent || 0} className="mb-1" />
                   <p className="text-sm text-muted-foreground">
-                    {systemStatus.resourceUsage.memoryMb.toFixed(0)} MB of {systemStatus.resourceLimits.maxMemoryMb} MB
+                    {(systemStatus?.resourceUsage?.memoryMb || 0).toFixed(0)} MB of {systemStatus?.resourceLimits?.maxMemoryMb || 0} MB
                   </p>
                 </div>
                 <div className="pt-4">
