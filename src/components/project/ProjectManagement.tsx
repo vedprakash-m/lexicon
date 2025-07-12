@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, FolderOpen, Settings, Download, Book, ArrowRight } from 'lucide-react';
 import { Button, Card, Badge, Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui';
 import { ProjectCreationWizard } from './ProjectCreationWizard';
+import { useNavigate } from 'react-router-dom';
 
 interface Project {
   id: string;
@@ -24,42 +25,81 @@ interface ProjectData {
   lastModified: Date;
 }
 
-const mockProjects: Project[] = [
-  {
-    id: '1',
-    name: 'Structured Scriptures Collection',
-    description: 'Vedic literature and Eastern philosophy books for personal study',
-    type: 'collection',
-    status: 'active',
-    booksCount: 156,
-    createdAt: new Date('2024-01-15'),
-    lastModified: new Date('2024-06-20')
-  },
-  {
-    id: '2',
-    name: 'Philosophy Deep Dive',
-    description: 'Western philosophy texts for comparative analysis',
-    type: 'collection',
-    status: 'active',
-    booksCount: 45,
-    createdAt: new Date('2024-03-10'),
-    lastModified: new Date('2024-06-18')
-  },
-  {
-    id: '3',
-    name: 'RAG Training Dataset',
-    description: 'High-quality chunks optimized for LLM training',
-    type: 'processing',
-    status: 'completed',
-    booksCount: 89,
-    createdAt: new Date('2024-02-01'),
-    lastModified: new Date('2024-05-15')
-  }
-];
+const mockProjects: Project[] = [];
 
 export function ProjectManagement() {
-  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [projects, setProjects] = useState<Project[]>(() => {
+    // Load projects from localStorage on initialization
+    const savedProjects = localStorage.getItem('lexicon-user-projects');
+    if (savedProjects) {
+      try {
+        const parsed = JSON.parse(savedProjects);
+        // Convert date strings back to Date objects
+        return parsed.map((project: any) => ({
+          ...project,
+          createdAt: new Date(project.createdAt),
+          lastModified: new Date(project.lastModified)
+        }));
+      } catch (error) {
+        console.error('Error parsing projects from localStorage:', error);
+        return [];
+      }
+    }
+    return [];
+  });
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+
+  // Save projects to localStorage whenever projects change
+  useEffect(() => {
+    localStorage.setItem('lexicon-user-projects', JSON.stringify(projects));
+  }, [projects]);
+
+  // Clear any localStorage that might have legacy data
+  useEffect(() => {
+    // Clear any legacy project data on component mount
+    const keysToCheck = [
+      'lexicon-projects', 
+      'projects', 
+      'collections',
+      'lexicon-collections',
+      'lexicon-state',
+      'lexicon-app-state'
+    ];
+    
+    let hasCleared = false;
+    keysToCheck.forEach(key => {
+      if (localStorage.getItem(key)) {
+        localStorage.removeItem(key);
+        hasCleared = true;
+      }
+    });
+    
+    // Also clear any keys that contain project or collection data
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && (key.includes('project') || key.includes('collection') || key.includes('Śrimad') || key.includes('Bhāgavatam'))) {
+        localStorage.removeItem(key);
+        hasCleared = true;
+      }
+    }
+    
+    if (hasCleared) {
+      console.log('Cleared legacy project data from localStorage');
+    }
+  }, []);
+
+  const navigate = useNavigate();
+
+  const handleViewDetails = (project: Project) => {
+    setSelectedProject(project);
+    setShowDetailsDialog(true);
+  };
+
+  const handleOpenProject = (projectId: string) => {
+    navigate(`/projects/${projectId}`);
+  };
 
   const getStatusColor = (status: Project['status']) => {
     switch (status) {
@@ -111,6 +151,59 @@ export function ProjectManagement() {
               }}
               onCancel={() => setShowCreateDialog(false)}
             />
+          </DialogContent>
+        </Dialog>
+
+        {/* Project Details Dialog */}
+        <Dialog open={showDetailsDialog} onClose={() => setShowDetailsDialog(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>
+                {selectedProject?.name || 'Project Details'}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedProject && (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-semibold mb-2">Description</h3>
+                  <p className="text-muted-foreground">{selectedProject.description}</p>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="font-medium mb-1">Type</h4>
+                    <p className="text-sm text-muted-foreground capitalize">{selectedProject.type}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Status</h4>
+                    <div className="flex items-center space-x-2">
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(selectedProject.status)}`} />
+                      <span className="text-sm text-muted-foreground capitalize">{selectedProject.status}</span>
+                    </div>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Books</h4>
+                    <p className="text-sm text-muted-foreground">{selectedProject.booksCount}</p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium mb-1">Created</h4>
+                    <p className="text-sm text-muted-foreground">{selectedProject.createdAt.toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setShowDetailsDialog(false)}>
+                    Close
+                  </Button>
+                  <Button onClick={() => {
+                    handleOpenProject(selectedProject.id);
+                    setShowDetailsDialog(false);
+                  }}>
+                    Open Project
+                  </Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
@@ -202,7 +295,11 @@ export function ProjectManagement() {
                   <div className="text-sm text-muted-foreground">
                     {project.booksCount} books
                   </div>
-                  <Button variant="ghost" size="sm">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => handleViewDetails(project)}
+                  >
                     View Details
                     <ArrowRight className="h-3 w-3 ml-1" />
                   </Button>

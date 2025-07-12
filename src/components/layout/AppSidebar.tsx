@@ -42,25 +42,25 @@ const sidebarItems: SidebarItem[] = [
     id: 'library',
     label: 'Enhanced Catalog',
     icon: Search,
-    count: 247,
+    count: 0,
     route: '/library',
     children: [
-      { id: 'all-books', label: 'All Books', icon: BookOpen, count: 247, route: '/library' },
-      { id: 'in-progress', label: 'In Progress', icon: Download, count: 3, route: '/library?status=processing' },
-      { id: 'completed', label: 'Completed', icon: Library, count: 244, route: '/library?status=completed' },
+      { id: 'all-books', label: 'All Books', icon: BookOpen, count: 0, route: '/library' },
+      { id: 'in-progress', label: 'In Progress', icon: Download, count: 0, route: '/library?status=processing' },
+      { id: 'completed', label: 'Completed', icon: Library, count: 0, route: '/library?status=completed' },
     ]
   },
   {
     id: 'collections',
     label: 'Collections',
     icon: FolderOpen,
-    count: 12,
+    count: 0,
     route: '/projects',
     children: [
-      { id: 'scripture', label: 'Structured Scriptures', icon: FolderOpen, count: 156, route: '/projects?type=scripture' },
-      { id: 'philosophy', label: 'Philosophy', icon: FolderOpen, count: 45, route: '/projects?type=philosophy' },
-      { id: 'literature', label: 'Literature', icon: FolderOpen, count: 32, route: '/projects?type=literature' },
-      { id: 'reference', label: 'Reference', icon: FolderOpen, count: 14, route: '/projects?type=reference' },
+      { id: 'scripture', label: 'Structured Scriptures', icon: FolderOpen, count: 0, route: '/projects?type=scripture' },
+      { id: 'philosophy', label: 'Philosophy', icon: FolderOpen, count: 0, route: '/projects?type=philosophy' },
+      { id: 'literature', label: 'Literature', icon: FolderOpen, count: 0, route: '/projects?type=literature' },
+      { id: 'reference', label: 'Reference', icon: FolderOpen, count: 0, route: '/projects?type=reference' },
     ]
   },
   {
@@ -68,13 +68,13 @@ const sidebarItems: SidebarItem[] = [
     label: 'Processing',
     icon: Settings,
     children: [
-      { id: 'sources', label: 'Sources & Rules', icon: Download, count: 5, route: '/sources' },
-      { id: 'scraping', label: 'Scraping Jobs', icon: Download, count: 3, route: '/scraping' },
-      { id: 'batch', label: 'Batch Processing', icon: Download, count: 1, route: '/batch' },
+      { id: 'sources', label: 'Sources & Rules', icon: Download, count: 0, route: '/sources' },
+      { id: 'scraping', label: 'Scraping Jobs', icon: Download, count: 0, route: '/scraping' },
+      { id: 'batch', label: 'Batch Processing', icon: Download, count: 0, route: '/batch' },
       { id: 'chunking', label: 'Advanced Chunking', icon: Brain, route: '/chunking' },
       { id: 'export', label: 'Export Manager', icon: Download, route: '/export' },
-      { id: 'queue', label: 'Processing Queue', icon: Download, count: 2, route: '/processing' },
-      { id: 'profiles', label: 'Processing Profiles', icon: Settings, count: 4, route: '/processing/profiles' },
+      { id: 'queue', label: 'Processing Queue', icon: Download, count: 0, route: '/processing' },
+      { id: 'profiles', label: 'Processing Profiles', icon: Settings, count: 0, route: '/processing/profiles' },
     ]
   },
   {
@@ -104,6 +104,10 @@ export function AppSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['library', 'collections']));
+  
+  const handleAddBook = () => {
+    navigate('/library');
+  };
   
   // Determine active item based on current path
   const getActiveItem = () => {
@@ -190,60 +194,67 @@ export function AppSidebar() {
 
   return (
     <aside 
-      className="w-64 border-r border-border bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+      className="w-64 border-r border-border bg-background/50 backdrop-blur supports-[backdrop-filter]:bg-background/80 flex flex-col"
       role="navigation"
       aria-label="Main navigation"
     >
-      <div className="p-4">
-        {/* Quick Actions */}
-        <div className="mb-6">
-          <Button 
-            className="w-full justify-start" 
-            size="sm"
-            ariaLabel="Add new book to library"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Book
-          </Button>
-        </div>
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="p-4">
+          {/* Quick Actions */}
+          <div className="mb-6">
+            <Button 
+              className="w-full justify-start" 
+              size="sm"
+              ariaLabel="Add new book to library"
+              onClick={handleAddBook}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Book
+            </Button>
+          </div>
 
-        {/* Navigation */}
-        <nav className="space-y-2" role="tree" aria-label="Main navigation tree">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-            Navigation
-          </h2>
-          <ul className="space-y-1" role="none">
-            {sidebarItems.map(item => (
-              <li key={item.id} role="none">
-                {renderSidebarItem(item)}
-              </li>
-            ))}
-          </ul>
-        </nav>
+          {/* Navigation */}
+          <nav className="space-y-2" role="tree" aria-label="Main navigation tree">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+              Navigation
+            </h2>
+            <ul className="space-y-1" role="none">
+              {sidebarItems.map(item => (
+                <li key={item.id} role="none">
+                  {renderSidebarItem(item)}
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-        {/* Status Section */}
-        <div className="mt-8 pt-4 border-t border-border">
-          <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-            Status
-          </h2>
-          <div 
-            className="space-y-2 text-sm text-muted-foreground"
-            role="status"
-            aria-label="System status information"
-          >
-            <div className="flex justify-between">
-              <span>Storage Used</span>
-              <span>2.4 GB</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Processing</span>
-              <span className="text-blue-500">2 active</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Last Sync</span>
-              <span>2 min ago</span>
+          {/* Status Section */}
+          <div className="mt-8 pt-4 border-t border-border">
+            <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+              Status
+            </h2>
+            <div 
+              className="space-y-2 text-sm text-muted-foreground"
+              role="status"
+              aria-label="System status information"
+            >
+              <div className="flex justify-between">
+                <span>Storage Used</span>
+                <span>0 MB</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Processing</span>
+                <span className="text-muted-foreground">0 active</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Last Sync</span>
+                <span>Never</span>
+              </div>
             </div>
           </div>
+          
+          {/* Bottom padding to ensure help button doesn't overlap */}
+          <div className="h-16" />
         </div>
       </div>
     </aside>

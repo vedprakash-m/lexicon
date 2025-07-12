@@ -25,15 +25,15 @@ export function StatusBar() {
       {/* Center section - Current activity */}
       <div className="flex items-center space-x-2">
         <Badge variant="secondary" className="h-4 text-xs">
-          Processing: 2 files
+          Ready
         </Badge>
       </div>
 
       {/* Right section - Quick stats */}
       <div className="flex items-center space-x-4">
-        <span>247 books</span>
+        <span>0 books</span>
         <span>•</span>
-        <span>2.4 GB</span>
+        <span>0 MB</span>
         <span>•</span>
         <span>v1.0.0</span>
       </div>

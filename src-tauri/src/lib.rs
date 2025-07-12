@@ -79,9 +79,9 @@ use catalog_commands::{
     export_catalog, get_related_books, get_catalog_stats, generate_catalog_report
 };
 use sync_commands::{
-    get_sync_status, configure_sync, start_sync, stop_sync,
-    list_backup_archives, create_backup, restore_backup, delete_backup,
-    verify_backup, configure_backup
+    get_sync_status, configure_sync, start_sync, stop_sync, force_sync,
+    get_backup_list, create_backup, restore_backup, delete_backup,
+    verify_backup, list_backup_archives
 };
 use performance_monitor::PerformanceMonitor;
 use background_tasks::BackgroundTaskSystem;
@@ -250,12 +250,13 @@ pub async fn run() {
       configure_sync,
       start_sync,
       stop_sync,
-      list_backup_archives,
+      force_sync,
+      get_backup_list,
       create_backup,
       restore_backup,
       delete_backup,
       verify_backup,
-      configure_backup,
+      list_backup_archives,
       // Performance and Background Task commands
       get_performance_metrics,
       get_resource_recommendation,

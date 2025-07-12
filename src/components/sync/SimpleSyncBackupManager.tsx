@@ -20,10 +20,21 @@ import {
   RotateCcw,
   HardDrive,
   Clock,
-  FileText
+  FileText,
+  Settings
 } from 'lucide-react';
 import { useSyncManager } from '@/hooks/useSyncManager';
+import { SyncTargetManager } from './SyncTargetManager';
 import { formatBytes, formatRelativeTime } from '@/lib/utils';
+
+interface SyncTarget {
+  id: string;
+  name: string;
+  type: 'local' | 'dropbox' | 'google_drive' | 'aws_s3' | 'azure_blob';
+  status: 'connected' | 'error' | 'disconnected';
+  lastSync?: Date;
+  config: Record<string, any>;
+}
 
 export const SimpleSyncBackupManager: React.FC = () => {
   const {
@@ -44,6 +55,7 @@ export const SimpleSyncBackupManager: React.FC = () => {
 
   const [newBackupName, setNewBackupName] = useState('');
   const [selectedTab, setSelectedTab] = useState('sync');
+  const [syncTargets, setSyncTargets] = useState<SyncTarget[]>([]);
 
   const handleCreateBackup = async () => {
     if (!newBackupName.trim()) return;
@@ -124,6 +136,17 @@ export const SimpleSyncBackupManager: React.FC = () => {
             }`}
           >
             Backup & Restore
+          </button>
+          <button
+            onClick={() => setSelectedTab('targets')}
+            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+              selectedTab === 'targets'
+                ? 'border-blue-500 text-blue-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Settings className="h-4 w-4 inline mr-1" />
+            Sync Targets
           </button>
         </nav>
       </div>
@@ -329,6 +352,46 @@ export const SimpleSyncBackupManager: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* Sync Targets Tab */}
+      {selectedTab === 'targets' && (
+        <SyncTargetManager
+          targets={syncTargets}
+          onAddTarget={(target) => {
+            const newTarget = {
+              ...target,
+              id: Date.now().toString()
+            };
+            setSyncTargets(prev => [...prev, newTarget]);
+          }}
+          onUpdateTarget={(id, updates) => {
+            setSyncTargets(prev => 
+              prev.map(target => 
+                target.id === id ? { ...target, ...updates } : target
+              )
+            );
+          }}
+          onDeleteTarget={(id) => {
+            setSyncTargets(prev => prev.filter(target => target.id !== id));
+          }}
+          onTestConnection={async (id) => {
+            // Simulate testing connection
+            console.log('Testing connection for target:', id);
+            const target = syncTargets.find(t => t.id === id);
+            if (target) {
+              setSyncTargets(prev => 
+                prev.map(t => 
+                  t.id === id 
+                    ? { ...t, status: 'connected' as const, lastSync: new Date() }
+                    : t
+                )
+              );
+              return true;
+            }
+            return false;
+          }}
+        />
       )}
     </div>
   );

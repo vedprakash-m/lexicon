@@ -14,102 +14,236 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
-  Info,
-  Download,
-  RefreshCw,
-  Sparkles,
-  FileText,
-  Plus
+  Info
 } from 'lucide-react';
-import { useCatalogManager, BookMetadata, CatalogFilters } from '../../hooks/useCatalogManager';
-import { Button } from '../ui';
-import { cn } from '../../lib/utils';
-import { FileUploadDialog } from './FileUploadDialog';
 
-// Integrated Enhanced Catalog Interface with backend integration
-const IntegratedCatalogInterface = () => {
-  const { 
-    books: allBooks, 
-    stats, 
-    isLoading: catalogLoading, 
-    error: catalogError,
-    searchBooks,
-    enrichBook,
-    exportCatalog,
-    getRelatedBooks,
-    refreshCatalog,
-    generateCatalogReport
-  } = useCatalogManager();
-
-  const [books, setBooks] = useState<BookMetadata[]>([]);
+// Enhanced catalog interface with rich metadata display
+const EnhancedCatalogInterface = () => {
+  const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters] = useState<CatalogFilters>({
+  const [filters, setFilters] = useState({
+    category: '',
+    author: '',
+    language: '',
     yearRange: [1000, 2025],
     hasTranslations: false,
     hasCover: false
   });
-  const [sortBy, setSortBy] = useState<'title' | 'author' | 'year' | 'rating' | 'quality'>('title');
-  const [selectedBook, setSelectedBook] = useState<BookMetadata | null>(null);
+  const [sortBy, setSortBy] = useState('title');
+  const [selectedBook, setSelectedBook] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [enriching, setEnriching] = useState<Set<string>>(new Set());
-  const [exporting, setExporting] = useState(false);
-  const [showUploadDialog, setShowUploadDialog] = useState(false);
 
-  // Update books when catalog data changes
-  useEffect(() => {
-    if (allBooks.length > 0) {
-      setBooks(allBooks);
-      setLoading(false);
-    }
-  }, [allBooks]);
-
-  // Handle search and filtering
-  useEffect(() => {
-    const performSearch = async () => {
-      if (catalogLoading) return;
-      
-      // For now, just use local filtering to avoid continuous API calls
-      if (!searchQuery.trim() && Object.keys(filters).length === 0) {
-        setBooks(allBooks);
-        setLoading(false);
-        return;
-      }
-
-      setLoading(true);
-      try {
-        // Simple local filtering for now
-        let results = allBooks;
-        
-        if (searchQuery.trim()) {
-          const query = searchQuery.toLowerCase();
-          results = results.filter(book => 
-            book.title.toLowerCase().includes(query) ||
-            book.authors.some(author => author.name.toLowerCase().includes(query))
-          );
+  // Empty books for new installation
+  const mockBooks = [];
+    {
+      id: 'bhagavad_gita_en',
+      title: 'Bhagavad Gita As It Is',
+      subtitle: 'With Original Sanskrit Text',
+      authors: [
+        {
+          name: 'A.C. Bhaktivedanta Swami Prabhupada',
+          role: 'Author & Translator',
+          photo: '/api/assets/author_bhaktivedanta_photo.jpg'
         }
-        
-        setBooks(results);
-      } catch (err) {
-        console.error('Search failed:', err);
-        setBooks(allBooks);
-      } finally {
-        setLoading(false);
-      }
-    };
+      ],
+      publisher: {
+        name: 'The Bhaktivedanta Book Trust',
+        logo: '/api/assets/publisher_bbt_logo.jpg'
+      },
+      publication_year: 1972,
+      language: 'English',
+      original_language: 'Sanskrit',
+      pages: 944,
+      isbn: '978-0-89213-268-3',
+      categories: ['Philosophy', 'Religion', 'Spirituality'],
+      subjects: ['Hindu Philosophy', 'Yoga', 'Meditation', 'Bhakti'],
+      description: 'The largest-selling edition of the Gita in the Western world, Bhagavad-gita As It Is is more than a book. It is alive with knowledge and devotion; thus it has the power to change your life.',
+      cover_image: '/api/assets/bhagavad_gita_cover.jpg',
+      rating: 4.8,
+      quality_score: 0.92,
+      translations: ['Spanish', 'French', 'German', 'Italian'],
+      related_books: ['srimad_bhagavatam_1', 'sri_isopanisad'],
+      series: null,
+      enrichment_sources: ['google_books', 'openlibrary'],
+      relationships: [
+        { type: 'translation', book_id: 'bhagavad_gita_es', confidence: 1.0 },
+        { type: 'same_author', book_id: 'srimad_bhagavatam_1', confidence: 0.95 },
+        { type: 'thematic_similarity', book_id: 'tao_te_ching', confidence: 0.72 }
+      ]
+    },
+    {
+      id: 'srimad_bhagavatam_1',
+      title: 'Srimad Bhagavatam Canto 1',
+      subtitle: 'Creation',
+      authors: [
+        {
+          name: 'A.C. Bhaktivedanta Swami Prabhupada',
+          role: 'Translator & Commentator',
+          photo: '/api/assets/author_bhaktivedanta_photo.jpg'
+        }
+      ],
+      publisher: {
+        name: 'The Bhaktivedanta Book Trust',
+        logo: '/api/assets/publisher_bbt_logo.jpg'
+      },
+      publication_year: 1974,
+      language: 'English',
+      original_language: 'Sanskrit',
+      pages: 756,
+      series: 'Srimad Bhagavatam',
+      series_number: 1,
+      categories: ['Philosophy', 'Religion', 'Spirituality', 'Literature'],
+      subjects: ['Hindu Philosophy', 'Stories', 'Devotion', 'Bhakti', 'Vedic Literature'],
+      description: 'First Canto of the great Vedic literature, containing the essence of all Vedic knowledge.',
+      cover_image: '/api/assets/srimad_bhagavatam_1_cover.jpg',
+      rating: 4.9,
+      quality_score: 0.89,
+      relationships: [
+        { type: 'same_author', book_id: 'bhagavad_gita_en', confidence: 0.95 },
+        { type: 'sequel', book_id: 'srimad_bhagavatam_2', confidence: 0.9 }
+      ]
+    },
+    {
+      id: 'thinking_fast_slow',
+      title: 'Thinking, Fast and Slow',
+      authors: [
+        {
+          name: 'Daniel Kahneman',
+          role: 'Author',
+          photo: '/api/assets/author_kahneman_photo.jpg'
+        }
+      ],
+      publisher: {
+        name: 'Farrar, Straus and Giroux',
+        logo: '/api/assets/publisher_fsg_logo.jpg'
+      },
+      publication_year: 2011,
+      language: 'English',
+      pages: 511,
+      isbn: '978-0-374-27563-1',
+      categories: ['Psychology', 'Science', 'Behavioral Economics'],
+      subjects: ['Cognitive Psychology', 'Decision Making', 'Behavioral Science'],
+      description: 'A revolutionary book about how the mind makes decisions.',
+      cover_image: '/api/assets/thinking_fast_slow_cover.jpg',
+      rating: 4.6,
+      quality_score: 0.94,
+      translations: ['Spanish', 'French', 'German'],
+      relationships: []
+    },
+    {
+      id: 'art_of_war',
+      title: 'The Art of War',
+      authors: [
+        {
+          name: 'Sun Tzu',
+          role: 'Author'
+        }
+      ],
+      publication_year: -500, // BCE
+      language: 'English',
+      original_language: 'Chinese',
+      pages: 273,
+      categories: ['Strategy', 'Military', 'Philosophy'],
+      subjects: ['War', 'Strategy', 'Leadership', 'Tactics'],
+      description: 'Ancient Chinese military strategy and philosophy.',
+      cover_image: '/api/assets/art_of_war_cover.jpg',
+      rating: 4.5,
+      quality_score: 0.78,
+      translations: ['Spanish', 'French', 'German', 'Italian', 'Japanese'],
+      relationships: []
+    }
+  ];
 
-    const debounceTimer = setTimeout(performSearch, 500);
-    return () => clearTimeout(debounceTimer);
-  }, [searchQuery, allBooks, catalogLoading]);
+  useEffect(() => {
+    // Simulate loading data
+    setTimeout(() => {
+      setBooks(mockBooks);
+      setLoading(false);
+    }, 1000);
+  }, []);
+
+  // Filter and search logic
+  const filteredBooks = useMemo(() => {
+    let result = books;
+
+    // Search filter
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(book => 
+        book.title.toLowerCase().includes(query) ||
+        book.authors.some(author => author.name.toLowerCase().includes(query)) ||
+        book.description.toLowerCase().includes(query) ||
+        book.subjects.some(subject => subject.toLowerCase().includes(query))
+      );
+    }
+
+    // Category filter
+    if (filters.category) {
+      result = result.filter(book => 
+        book.categories.includes(filters.category)
+      );
+    }
+
+    // Author filter
+    if (filters.author) {
+      result = result.filter(book =>
+        book.authors.some(author => 
+          author.name.toLowerCase().includes(filters.author.toLowerCase())
+        )
+      );
+    }
+
+    // Language filter
+    if (filters.language) {
+      result = result.filter(book => book.language === filters.language);
+    }
+
+    // Year range filter
+    result = result.filter(book => 
+      book.publication_year >= filters.yearRange[0] && 
+      book.publication_year <= filters.yearRange[1]
+    );
+
+    // Has translations filter
+    if (filters.hasTranslations) {
+      result = result.filter(book => book.translations && book.translations.length > 0);
+    }
+
+    // Has cover filter
+    if (filters.hasCover) {
+      result = result.filter(book => book.cover_image);
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case 'title':
+          return a.title.localeCompare(b.title);
+        case 'author':
+          return a.authors[0]?.name.localeCompare(b.authors[0]?.name) || 0;
+        case 'year':
+          return b.publication_year - a.publication_year;
+        case 'rating':
+          return (b.rating || 0) - (a.rating || 0);
+        case 'quality':
+          return (b.quality_score || 0) - (a.quality_score || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [books, searchQuery, filters, sortBy]);
 
   // Get unique values for filter options
   const filterOptions = useMemo(() => {
-    const categories = new Set<string>();
-    const authors = new Set<string>();
-    const languages = new Set<string>();
+    const categories = new Set();
+    const authors = new Set();
+    const languages = new Set();
 
-    allBooks.forEach(book => {
+    books.forEach(book => {
       book.categories.forEach(cat => categories.add(cat));
       book.authors.forEach(author => authors.add(author.name));
       languages.add(book.language);
@@ -120,58 +254,11 @@ const IntegratedCatalogInterface = () => {
       authors: Array.from(authors).sort(),
       languages: Array.from(languages).sort()
     };
-  }, [allBooks]);
+  }, [books]);
 
-  const handleEnrichBook = async (bookId: string) => {
-    setEnriching(prev => new Set(prev).add(bookId));
-    try {
-      const result = await enrichBook(bookId);
-      if (result.success) {
-        // Refresh the specific book data
-        await refreshCatalog();
-      }
-    } catch (err) {
-      console.error('Enrichment failed:', err);
-    } finally {
-      setEnriching(prev => {
-        const next = new Set(prev);
-        next.delete(bookId);
-        return next;
-      });
-    }
-  };
-
-  const handleExportCatalog = async (format: string) => {
-    setExporting(true);
-    try {
-      const result = await exportCatalog(format);
-      // Trigger download
-      const blob = new Blob([result], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `catalog.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Export failed:', err);
-    } finally {
-      setExporting(false);
-    }
-  };
-
-  const handleFileUpload = async (files: File[]) => {
-    console.log('Files to upload:', files);
-    // TODO: Implement actual file upload to backend
-    // For now, just show a success message
-    alert(`${files.length} file(s) selected for upload. Upload functionality will be implemented.`);
-  };
-
-  const BookCard = ({ book }: { book: BookMetadata }) => (
+  const BookCard = ({ book }) => (
     <div 
-      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer overflow-hidden group"
+      className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer overflow-hidden"
       onClick={() => setSelectedBook(book)}
     >
       {/* Cover Image */}
@@ -180,9 +267,9 @@ const IntegratedCatalogInterface = () => {
           <img 
             src={book.cover_image} 
             alt={book.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
             onError={(e) => {
-              e.currentTarget.src = '/api/placeholder-cover.jpg';
+              e.target.src = '/api/placeholder-cover.jpg';
             }}
           />
         ) : (
@@ -205,33 +292,13 @@ const IntegratedCatalogInterface = () => {
             {book.rating}
           </div>
         )}
-
-        {/* Action Buttons */}
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <Button
-            size="sm"
-            variant="secondary"
-            className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEnrichBook(book.id);
-            }}
-            disabled={enriching.has(book.id)}
-          >
-            {enriching.has(book.id) ? (
-              <RefreshCw size={14} className="animate-spin" />
-            ) : (
-              <Sparkles size={14} />
-            )}
-          </Button>
-        </div>
       </div>
 
       {/* Content */}
       <div className="p-4">
         <h3 className="font-bold text-lg mb-1 line-clamp-2">{book.title}</h3>
         {book.subtitle && (
-          <p className="text-gray-600 text-sm mb-2 line-clamp-1">{book.subtitle}</p>
+          <p className="text-gray-600 text-sm mb-2">{book.subtitle}</p>
         )}
         
         <div className="flex items-center mb-2 text-sm text-gray-600">
@@ -281,9 +348,9 @@ const IntegratedCatalogInterface = () => {
     </div>
   );
 
-  const BookListItem = ({ book }: { book: BookMetadata }) => (
+  const BookListItem = ({ book }) => (
     <div 
-      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer p-4 flex group"
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer p-4 flex"
       onClick={() => setSelectedBook(book)}
     >
       {/* Cover Thumbnail */}
@@ -294,7 +361,7 @@ const IntegratedCatalogInterface = () => {
             alt={book.title}
             className="w-full h-full object-cover"
             onError={(e) => {
-              e.currentTarget.src = '/api/placeholder-cover.jpg';
+              e.target.src = '/api/placeholder-cover.jpg';
             }}
           />
         ) : (
@@ -307,13 +374,13 @@ const IntegratedCatalogInterface = () => {
       {/* Content */}
       <div className="flex-1">
         <div className="flex justify-between items-start mb-2">
-          <div className="flex-1">
+          <div>
             <h3 className="font-bold text-lg">{book.title}</h3>
             {book.subtitle && (
               <p className="text-gray-600 text-sm">{book.subtitle}</p>
             )}
           </div>
-          <div className="flex items-center space-x-2 ml-4">
+          <div className="flex items-center space-x-2">
             {book.rating && (
               <div className="flex items-center text-sm">
                 <Star size={14} className="mr-1 fill-current text-yellow-400" />
@@ -325,22 +392,6 @@ const IntegratedCatalogInterface = () => {
                 {Math.round(book.quality_score * 100)}% quality
               </div>
             )}
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEnrichBook(book.id);
-              }}
-              disabled={enriching.has(book.id)}
-            >
-              {enriching.has(book.id) ? (
-                <RefreshCw size={14} className="animate-spin" />
-              ) : (
-                <Sparkles size={14} />
-              )}
-            </Button>
           </div>
         </div>
 
@@ -357,12 +408,10 @@ const IntegratedCatalogInterface = () => {
             <Globe size={14} className="mr-1" />
             <span>{book.language}</span>
           </div>
-          {book.pages && (
-            <div className="flex items-center">
-              <BookOpen size={14} className="mr-1" />
-              <span>{book.pages} pages</span>
-            </div>
-          )}
+          <div className="flex items-center">
+            <BookOpen size={14} className="mr-1" />
+            <span>{book.pages} pages</span>
+          </div>
         </div>
 
         <p className="text-gray-700 text-sm mb-3 line-clamp-2">{book.description}</p>
@@ -395,7 +444,7 @@ const IntegratedCatalogInterface = () => {
     </div>
   );
 
-  const BookDetailModal = ({ book, onClose }: { book: BookMetadata; onClose: () => void }) => {
+  const BookDetailModal = ({ book, onClose }) => {
     if (!book) return null;
 
     return (
@@ -405,27 +454,12 @@ const IntegratedCatalogInterface = () => {
             {/* Header */}
             <div className="flex justify-between items-start mb-6">
               <h2 className="text-2xl font-bold">{book.title}</h2>
-              <div className="flex items-center space-x-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleEnrichBook(book.id)}
-                  disabled={enriching.has(book.id)}
-                >
-                  {enriching.has(book.id) ? (
-                    <RefreshCw size={16} className="animate-spin mr-2" />
-                  ) : (
-                    <Sparkles size={16} className="mr-2" />
-                  )}
-                  Enrich
-                </Button>
-                <button 
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
+              <button 
+                onClick={onClose}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ✕
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -465,9 +499,8 @@ const IntegratedCatalogInterface = () => {
                 </div>
               </div>
 
-              {/* Details - same as original component but with real data */}
+              {/* Details */}
               <div className="md:col-span-2">
-                {/* Rest of the detail modal content - same as original */}
                 <div className="space-y-4">
                   {/* Authors */}
                   <div>
@@ -579,7 +612,7 @@ const IntegratedCatalogInterface = () => {
                       <h3 className="font-semibold mb-2">Related Books</h3>
                       <div className="space-y-2">
                         {book.relationships.map((rel, index) => {
-                          const relatedBook = allBooks.find(b => b.id === rel.book_id);
+                          const relatedBook = books.find(b => b.id === rel.book_id);
                           return (
                             <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                               <div>
@@ -588,14 +621,7 @@ const IntegratedCatalogInterface = () => {
                                   {rel.type.replace('_', ' ')} • {Math.round(rel.confidence * 100)}% confidence
                                 </div>
                               </div>
-                              <button 
-                                className="text-blue-600 hover:text-blue-800 text-sm"
-                                onClick={() => {
-                                  if (relatedBook) {
-                                    setSelectedBook(relatedBook);
-                                  }
-                                }}
-                              >
+                              <button className="text-blue-600 hover:text-blue-800 text-sm">
                                 View →
                               </button>
                             </div>
@@ -630,7 +656,7 @@ const IntegratedCatalogInterface = () => {
     );
   };
 
-  if (catalogLoading && !allBooks.length) {
+  if (loading) {
     return (
       <div className="p-6">
         <div className="animate-pulse space-y-6">
@@ -660,59 +686,13 @@ const IntegratedCatalogInterface = () => {
               <h1 className="text-2xl font-bold text-gray-900">Enhanced Book Catalog</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Button
-                onClick={() => setShowUploadDialog(true)}
-                className="bg-primary hover:bg-primary/90"
-              >
-                <Plus size={16} className="mr-2" />
-                Add Books
-              </Button>
-              {stats && (
-                <div className="text-sm text-gray-600">
-                  {books.length} of {stats.totalBooks} books
-                </div>
-              )}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleExportCatalog('json')}
-                disabled={exporting}
-              >
-                {exporting ? (
-                  <RefreshCw size={16} className="animate-spin mr-2" />
-                ) : (
-                  <Download size={16} className="mr-2" />
-                )}
-                Export
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={refreshCatalog}
-                disabled={catalogLoading}
-              >
-                {catalogLoading ? (
-                  <RefreshCw size={16} className="animate-spin mr-2" />
-                ) : (
-                  <RefreshCw size={16} className="mr-2" />
-                )}
-                Refresh
-              </Button>
+              <div className="text-sm text-gray-600">
+                {filteredBooks.length} of {books.length} books
+              </div>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Error Display */}
-      {catalogError && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="text-red-800">
-              <strong>Error:</strong> {catalogError}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Search and Controls */}
@@ -736,19 +716,13 @@ const IntegratedCatalogInterface = () => {
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('grid')}
-                className={cn(
-                  "p-2 rounded",
-                  viewMode === 'grid' ? 'bg-white shadow-sm' : ''
-                )}
+                className={`p-2 rounded ${viewMode === 'grid' ? 'bg-white shadow-sm' : ''}`}
               >
                 <Grid size={20} />
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={cn(
-                  "p-2 rounded",
-                  viewMode === 'list' ? 'bg-white shadow-sm' : ''
-                )}
+                className={`p-2 rounded ${viewMode === 'list' ? 'bg-white shadow-sm' : ''}`}
               >
                 <List size={20} />
               </button>
@@ -757,7 +731,7 @@ const IntegratedCatalogInterface = () => {
             {/* Sort */}
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value)}
               className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
             >
               <option value="title">Sort by Title</option>
@@ -786,8 +760,8 @@ const IntegratedCatalogInterface = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                   <select
-                    value={filters.category || ''}
-                    onChange={(e) => setFilters({...filters, category: e.target.value || undefined})}
+                    value={filters.category}
+                    onChange={(e) => setFilters({...filters, category: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Categories</option>
@@ -803,8 +777,8 @@ const IntegratedCatalogInterface = () => {
                   <input
                     type="text"
                     placeholder="Filter by author"
-                    value={filters.author || ''}
-                    onChange={(e) => setFilters({...filters, author: e.target.value || undefined})}
+                    value={filters.author}
+                    onChange={(e) => setFilters({...filters, author: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
@@ -813,8 +787,8 @@ const IntegratedCatalogInterface = () => {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Language</label>
                   <select
-                    value={filters.language || ''}
-                    onChange={(e) => setFilters({...filters, language: e.target.value || undefined})}
+                    value={filters.language}
+                    onChange={(e) => setFilters({...filters, language: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">All Languages</option>
@@ -831,7 +805,7 @@ const IntegratedCatalogInterface = () => {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.hasTranslations || false}
+                        checked={filters.hasTranslations}
                         onChange={(e) => setFilters({...filters, hasTranslations: e.target.checked})}
                         className="mr-2"
                       />
@@ -840,7 +814,7 @@ const IntegratedCatalogInterface = () => {
                     <label className="flex items-center">
                       <input
                         type="checkbox"
-                        checked={filters.hasCover || false}
+                        checked={filters.hasCover}
                         onChange={(e) => setFilters({...filters, hasCover: e.target.checked})}
                         className="mr-2"
                       />
@@ -853,28 +827,20 @@ const IntegratedCatalogInterface = () => {
           )}
         </div>
 
-        {/* Loading State */}
-        {loading && (
-          <div className="text-center py-12">
-            <RefreshCw size={48} className="mx-auto text-gray-400 mb-4 animate-spin" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Loading books...</h3>
-          </div>
-        )}
-
         {/* Results */}
-        {!loading && books.length === 0 ? (
+        {filteredBooks.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen size={48} className="mx-auto text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No books found</h3>
             <p className="text-gray-600">Try adjusting your search or filters</p>
           </div>
-        ) : !loading && (
+        ) : (
           <div className={
             viewMode === 'grid' 
               ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
               : "space-y-4"
           }>
-            {books.map(book => (
+            {filteredBooks.map(book => (
               <div key={book.id}>
                 {viewMode === 'grid' ? (
                   <BookCard book={book} />
@@ -893,16 +859,9 @@ const IntegratedCatalogInterface = () => {
             onClose={() => setSelectedBook(null)} 
           />
         )}
-
-        {/* File Upload Dialog */}
-        <FileUploadDialog
-          isOpen={showUploadDialog}
-          onClose={() => setShowUploadDialog(false)}
-          onUpload={handleFileUpload}
-        />
       </div>
     </div>
   );
 };
 
-export default IntegratedCatalogInterface;
+export default EnhancedCatalogInterface;

@@ -499,7 +499,7 @@ export function QuickHelp({ onOpenHelp }: QuickHelpProps) {
       variant="ghost"
       size="sm"
       onClick={() => onOpenHelp()}
-      className="fixed bottom-4 left-4 z-40 shadow-lg"
+      className="fixed bottom-4 right-4 z-40 shadow-lg"
       title="Get Help"
     >
       <HelpCircle className="w-4 h-4 mr-2" />

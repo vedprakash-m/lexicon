@@ -27,14 +27,20 @@ Lexicon combines the best of three technologies:
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Installation Options
 
-- macOS 10.15+ (Catalina or later)
-- Node.js 18+
-- Python 3.9+
-- Rust 1.77.2+
+#### Option 1: Download Native App (Recommended)
+1. Download the latest release from the [Releases page](https://github.com/vedprakash-m/lexicon/releases)
+2. Choose the appropriate installer:
+   - **Lexicon_1.0.0_aarch64.dmg** - For Apple Silicon Macs (M1/M2/M3)
+   - **Lexicon.app** - Direct app bundle for manual installation
+3. Double-click the `.dmg` file and drag Lexicon to your Applications folder
+4. Launch Lexicon from your Applications folder or Launchpad
 
-### Installation
+No additional setup required - the app includes all necessary dependencies!
+
+#### Option 2: Development Build
+If you want to build from source or contribute to development:
 
 ```bash
 # Clone the repository
@@ -53,11 +59,21 @@ cd ..
 npm run tauri dev
 ```
 
+### Prerequisites for Development
+- macOS 10.15+ (Catalina or later)
+- Node.js 18+
+- Python 3.9+
+- Rust 1.77.2+
+
 ### Building for Production
 
 ```bash
-# Build the application
+# Build the native application
 npm run tauri build
+
+# Output files will be created at:
+# - src-tauri/target/release/bundle/macos/Lexicon.app
+# - src-tauri/target/release/bundle/dmg/Lexicon_1.0.0_aarch64.dmg
 ```
 
 ## 🎯 Use Cases
@@ -103,12 +119,19 @@ npm run tauri build
 - **XML/Markdown**: Structured and human-readable formats
 - **Custom formats**: Extensible export system with compression support
 
-## 📊 Performance
+## 📊 Performance & System Requirements
 
+### App Specifications
+- **App Size**: 22MB (.app bundle)
+- **Installer Size**: 8.2MB (.dmg installer)
+- **Platform**: macOS 10.15+ (Apple Silicon optimized)
+- **Memory Usage**: Optimized for local processing with minimal resource usage
+
+### Processing Performance
 - **Processing Speed**: Target of 300-page document in under 30 minutes
 - **Quality Target**: 95%+ content extraction accuracy goal
 - **Scale**: Designed for personal and small team use with 100-500 documents
-- **Memory Efficiency**: Optimized for local processing with minimal resource usage
+- **Architecture**: Native performance with Rust backend and Python processing engine
 
 ## 🛠️ Development
 

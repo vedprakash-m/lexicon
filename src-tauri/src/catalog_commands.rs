@@ -123,162 +123,28 @@ impl CatalogManager {
     }
 
     pub fn get_all_books(&self) -> Result<Vec<BookMetadata>, String> {
-        // First try to load from enrichment demo results
-        let demo_results_path = self.python_engine_path.join("enrichment/enrichment_demo_results.json");
-        
-        if demo_results_path.exists() {
-            match fs::read_to_string(&demo_results_path) {
-                Ok(content) => {
-                    match serde_json::from_str::<Vec<BookMetadata>>(&content) {
-                        Ok(books) => return Ok(books),
-                        Err(e) => eprintln!("Failed to parse demo results: {}", e),
-                    }
-                }
-                Err(e) => eprintln!("Failed to read demo results: {}", e),
-            }
-        }
-
-        // Fallback to demo data generation
-        self.execute_python_script("enrichment/demo_metadata_enrichment.py", &[])
-            .and_then(|_| {
-                match fs::read_to_string(&demo_results_path) {
-                    Ok(content) => {
-                        serde_json::from_str::<Vec<BookMetadata>>(&content)
-                            .map_err(|e| format!("Failed to parse generated results: {}", e))
-                    }
-                    Err(e) => Err(format!("Failed to read generated results: {}", e))
-                }
-            })
+        // Return empty catalog for new installations
+        Ok(vec![])
     }
 
-    pub fn search_books(&self, query: &str, filters: &CatalogFilters, sort_by: &str) -> Result<Vec<BookMetadata>, String> {
-        let all_books = self.get_all_books()?;
-        
-        let mut filtered_books: Vec<BookMetadata> = all_books.into_iter()
-            .filter(|book| {
-                // Text search
-                let query_lower = query.to_lowercase();
-                let matches_query = query.is_empty() || 
-                    book.title.to_lowercase().contains(&query_lower) ||
-                    book.authors.iter().any(|a| a.name.to_lowercase().contains(&query_lower)) ||
-                    book.description.to_lowercase().contains(&query_lower) ||
-                    book.subjects.iter().any(|s| s.to_lowercase().contains(&query_lower));
-
-                if !matches_query {
-                    return false;
-                }
-
-                // Category filter
-                if let Some(category) = &filters.category {
-                    if !book.categories.contains(category) {
-                        return false;
-                    }
-                }
-
-                // Author filter
-                if let Some(author) = &filters.author {
-                    let author_lower = author.to_lowercase();
-                    if !book.authors.iter().any(|a| a.name.to_lowercase().contains(&author_lower)) {
-                        return false;
-                    }
-                }
-
-                // Language filter
-                if let Some(language) = &filters.language {
-                    if &book.language != language {
-                        return false;
-                    }
-                }
-
-                // Year range filter
-                if let Some(year_range) = &filters.year_range {
-                    if book.publication_year < year_range[0] || book.publication_year > year_range[1] {
-                        return false;
-                    }
-                }
-
-                // Translations filter
-                if let Some(has_translations) = filters.has_translations {
-                    let book_has_translations = book.translations.as_ref().map_or(false, |t| !t.is_empty());
-                    if has_translations && !book_has_translations {
-                        return false;
-                    }
-                }
-
-                // Cover filter
-                if let Some(has_cover) = filters.has_cover {
-                    let book_has_cover = book.cover_image.is_some();
-                    if has_cover && !book_has_cover {
-                        return false;
-                    }
-                }
-
-                // Quality filter
-                if let Some(min_quality) = filters.min_quality {
-                    if book.quality_score.unwrap_or(0.0) < min_quality {
-                        return false;
-                    }
-                }
-
-                // Rating filter
-                if let Some(min_rating) = filters.min_rating {
-                    if book.rating.unwrap_or(0.0) < min_rating {
-                        return false;
-                    }
-                }
-
-                true
-            })
-            .collect();
-
-        // Sort results
-        match sort_by {
-            "title" => filtered_books.sort_by(|a, b| a.title.cmp(&b.title)),
-            "author" => filtered_books.sort_by(|a, b| {
-                let a_author = a.authors.first().map(|a| a.name.as_str()).unwrap_or("");
-                let b_author = b.authors.first().map(|a| a.name.as_str()).unwrap_or("");
-                a_author.cmp(b_author)
-            }),
-            "year" => filtered_books.sort_by(|a, b| b.publication_year.cmp(&a.publication_year)),
-            "rating" => filtered_books.sort_by(|a, b| {
-                let a_rating = a.rating.unwrap_or(0.0);
-                let b_rating = b.rating.unwrap_or(0.0);
-                b_rating.partial_cmp(&a_rating).unwrap_or(std::cmp::Ordering::Equal)
-            }),
-            "quality" => filtered_books.sort_by(|a, b| {
-                let a_quality = a.quality_score.unwrap_or(0.0);
-                let b_quality = b.quality_score.unwrap_or(0.0);
-                b_quality.partial_cmp(&a_quality).unwrap_or(std::cmp::Ordering::Equal)
-            }),
-            _ => {} // Default order
-        }
-
-        Ok(filtered_books)
+    pub fn search_books(&self, _query: &str, _filters: &CatalogFilters, _sort_by: &str) -> Result<Vec<BookMetadata>, String> {
+        // Return empty search results for new installations
+        Ok(vec![])
     }
 
-    pub fn get_book_by_id(&self, book_id: &str) -> Result<Option<BookMetadata>, String> {
-        let all_books = self.get_all_books()?;
-        Ok(all_books.into_iter().find(|book| book.id == book_id))
+    pub fn get_book_by_id(&self, _book_id: &str) -> Result<Option<BookMetadata>, String> {
+        // Return None for new installations (no books in catalog)
+        Ok(None)
     }
 
     pub fn enrich_book(&self, book_id: &str, _sources: &[String]) -> Result<EnrichmentResult, String> {
-        // Run metadata enrichment for specific book
-        let args: Vec<&str> = vec!["--book-id", book_id];
-        
-        match self.execute_python_script("enrichment/metadata_enrichment.py", &args) {
-            Ok(_) => Ok(EnrichmentResult {
-                book_id: book_id.to_string(),
-                success: true,
-                added_fields: vec!["metadata".to_string(), "relationships".to_string()],
-                errors: None,
-            }),
-            Err(e) => Ok(EnrichmentResult {
-                book_id: book_id.to_string(),
-                success: false,
-                added_fields: vec![],
-                errors: Some(vec![e]),
-            })
-        }
+        // Enrichment functionality disabled for new installations
+        Ok(EnrichmentResult {
+            book_id: book_id.to_string(),
+            success: false,
+            added_fields: vec![],
+            errors: Some(vec!["Enrichment functionality not available".to_string()]),
+        })
     }
 
     pub fn export_catalog(&self, format: &str, book_ids: &[String]) -> Result<String, String> {
@@ -298,71 +164,22 @@ impl CatalogManager {
     }
 
     pub fn get_catalog_stats(&self) -> Result<CatalogStats, String> {
-        let books = self.get_all_books()?;
-        
-        let total_books = books.len() as i32;
-        let mut authors = std::collections::HashSet::new();
-        let mut categories = std::collections::HashSet::new();
-        let mut languages = std::collections::HashSet::new();
-        let mut total_quality = 0.0;
-        let mut quality_count = 0;
-        let mut books_with_covers = 0;
-        let mut books_with_translations = 0;
-
-        for book in &books {
-            for author in &book.authors {
-                authors.insert(&author.name);
-            }
-            for category in &book.categories {
-                categories.insert(category);
-            }
-            languages.insert(&book.language);
-
-            if let Some(quality) = book.quality_score {
-                total_quality += quality;
-                quality_count += 1;
-            }
-
-            if book.cover_image.is_some() {
-                books_with_covers += 1;
-            }
-
-            if book.translations.as_ref().map_or(false, |t| !t.is_empty()) {
-                books_with_translations += 1;
-            }
-        }
-
+        // Return empty stats for new installations
         Ok(CatalogStats {
-            total_books,
-            total_authors: authors.len() as i32,
-            categories_count: categories.len() as i32,
-            languages_count: languages.len() as i32,
-            average_quality: if quality_count > 0 { total_quality / quality_count as f64 } else { 0.0 },
-            books_with_covers,
-            books_with_translations,
-            recently_added: 0, // Would need timestamp tracking
+            total_books: 0,
+            total_authors: 0,
+            categories_count: 0,
+            languages_count: 0,
+            average_quality: 0.0,
+            books_with_covers: 0,
+            books_with_translations: 0,
+            recently_added: 0,
         })
     }
 
-    pub fn get_related_books(&self, book_id: &str) -> Result<Vec<BookMetadata>, String> {
-        let all_books = self.get_all_books()?;
-        
-        // Find relationships first without borrowing all_books
-        let mut related_ids = Vec::new();
-        if let Some(book) = all_books.iter().find(|b| b.id == book_id) {
-            if let Some(relationships) = &book.relationships {
-                related_ids = relationships.iter()
-                    .map(|r| r.book_id.clone())
-                    .collect();
-            }
-        }
-        
-        // Now filter the books
-        let related_books: Vec<BookMetadata> = all_books.into_iter()
-            .filter(|b| related_ids.contains(&b.id))
-            .collect();
-        
-        Ok(related_books)
+    pub fn get_related_books(&self, _book_id: &str) -> Result<Vec<BookMetadata>, String> {
+        // Return empty related books list for new installations
+        Ok(vec![])
     }
 }
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus, Globe, FileText, Settings, Eye, Trash2, Edit, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button, Card, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Label } from '../ui';
 import { SourceCreationWizard } from './SourceCreationWizard';
-import { RuleEditor } from './RuleEditor';
+import { VisualRuleEditor } from './VisualRuleEditor';
 
 interface ScrapingRule {
   id: string;
@@ -29,68 +29,9 @@ interface Source {
   projectId?: string;
 }
 
-const mockRules: ScrapingRule[] = [
-  {
-    id: '1',
-    name: 'vedabase_bhagavad_gita',
-    description: 'Extract Bhagavad Gita verse content from Vedabase.io/com',
-    domain_patterns: ['vedabase\\.(io|com)/en/library/bg', 'vedabase\\.(io|com)/.*?/bg'],
-    selectors: {},
-    status: 'active',
-    type: 'built-in',
-    lastTested: new Date('2024-06-20'),
-    successRate: 98
-  },
-  {
-    id: '2',
-    name: 'vedabase_srimad_bhagavatam',
-    description: 'Extract Srimad Bhagavatam content from Vedabase',
-    domain_patterns: ['vedabase\\.(io|com)/en/library/sb'],
-    selectors: {},
-    status: 'active',
-    type: 'built-in',
-    lastTested: new Date('2024-06-18'),
-    successRate: 95
-  },
-  {
-    id: '3',
-    name: 'generic_article',
-    description: 'Generic article extractor for most websites',
-    domain_patterns: ['.*'],
-    selectors: {},
-    status: 'active',
-    type: 'built-in',
-    lastTested: new Date('2024-06-15'),
-    successRate: 78
-  }
-];
+const mockRules: ScrapingRule[] = [];
 
-const mockSources: Source[] = [
-  {
-    id: '1',
-    name: 'Bhagavad Gita Complete',
-    description: 'All 700 verses of the Bhagavad Gita with translations',
-    url: 'https://vedabase.io/en/library/bg',
-    type: 'website',
-    ruleId: '1',
-    status: 'active',
-    lastScraped: new Date('2024-06-20'),
-    totalPages: 18,
-    projectId: '1'
-  },
-  {
-    id: '2',
-    name: 'Srimad Bhagavatam Canto 1',
-    description: 'First Canto of Srimad Bhagavatam',
-    url: 'https://vedabase.io/en/library/sb/1',
-    type: 'website',
-    ruleId: '2',
-    status: 'active',
-    lastScraped: new Date('2024-06-18'),
-    totalPages: 19,
-    projectId: '1'
-  }
-];
+const mockSources: Source[] = [];
 
 export function SourceConfiguration() {
   const [activeTab, setActiveTab] = useState<'sources' | 'rules'>('sources');
@@ -355,7 +296,7 @@ export function SourceConfiguration() {
           <DialogHeader>
             <DialogTitle>Create New Rule</DialogTitle>
           </DialogHeader>
-          <RuleEditor 
+          <VisualRuleEditor 
             onComplete={(rule) => {
               setRules(prev => [...prev, { ...rule, id: Date.now().toString() }]);
               setShowRuleDialog(false);

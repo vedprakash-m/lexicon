@@ -5,6 +5,10 @@ import { resolve } from "path";
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [react()],
+  
+  // Tauri expects a specific base path for assets
+  base: "./",
+  
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

@@ -70,10 +70,10 @@ export const SyncBackupManager: React.FC = () => {
 
   // Backup Configuration Form
   const [backupConfigForm, setBackupConfigForm] = useState<BackupConfig>({
-    auto_backup: true,
+    auto_backup: false,
     backup_interval: 3600, // 1 hour
     max_backups: 10,
-    backup_location: '/Users/vedprakashmishra/lexicon-backups',
+    backup_location: '',
     compress: true,
     encrypt: true
   });

@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Lexicon - Personal RAG Dataset Preparation Tool",
+        "title": "Lexicon - Universal RAG Dataset Preparation Tool",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
@@ -20,13 +20,15 @@
         "resizable": true,
         "fullscreen": false,
         "center": true,
-        "titleBarStyle": "Visible"
+        "titleBarStyle": "Visible",
+        "devtools": true
       }
     ],
     "security": {
       "csp": null
     },
-    "macOSPrivateApi": true
+    "macOSPrivateApi": true,
+    "withGlobalTauri": false
   },
   "bundle": {
     "active": true,
@@ -39,8 +41,8 @@
       "icons/icon.ico"
     ],
     "category": "Productivity",
-    "shortDescription": "Personal RAG Dataset Preparation Tool",
-    "longDescription": "Transform your books and documents into high-quality RAG datasets for AI applications. Specializing in Vedic texts with advanced scraping, processing, and enrichment capabilities.",
+    "shortDescription": "Universal RAG Dataset Preparation Tool",
+    "longDescription": "Transform any text content into high-quality RAG datasets for AI applications. Supports technical docs, academic papers, business documents, literature, and more with advanced processing and export capabilities.",
     "publisher": "Lexicon",
     "copyright": "Copyright © 2025 Lexicon. All rights reserved."
   },

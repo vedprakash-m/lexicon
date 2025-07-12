@@ -31,7 +31,7 @@ pub async fn get_cache_config(
     cache_manager: State<'_, CacheManagerState>,
 ) -> Result<CacheConfig, String> {
     let cache = cache_manager.lock().await;
-    Ok(cache.config.clone())
+    Ok(cache.get_config())
 }
 
 /// Update cache configuration
@@ -41,7 +41,7 @@ pub async fn update_cache_config(
     config_update: CacheConfigUpdate,
 ) -> Result<(), String> {
     let mut cache = cache_manager.lock().await;
-    let mut current_config = cache.config.clone();
+    let mut current_config = cache.get_config();
     
     // Apply updates
     if let Some(max_size_mb) = config_update.max_size_mb {
@@ -170,7 +170,7 @@ pub async fn export_cache_metrics(
     let metrics = serde_json::json!({
         "timestamp": chrono::Utc::now().to_rfc3339(),
         "cache_stats": stats,
-        "cache_config": cache.config,
+        "cache_config": cache.get_config(),
         "performance_analysis": {
             "efficiency_score": stats.hit_ratio * 100.0,
             "memory_efficiency": if stats.memory_usage_mb > 0.0 { 

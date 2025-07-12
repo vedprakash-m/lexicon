@@ -278,6 +278,11 @@ impl CacheManager {
         self.stats.read().await.clone()
     }
     
+    /// Get current cache configuration
+    pub fn get_config(&self) -> CacheConfig {
+        self.config.clone()
+    }
+    
     /// Update cache configuration
     pub async fn update_config(&mut self, new_config: CacheConfig) -> Result<()> {
         self.config = new_config;
@@ -308,13 +313,14 @@ impl CacheManager {
         }
         
         // Collect entries sorted by last accessed time (LRU)
-        let mut entries_by_access: Vec<_> = entries.iter().collect();
+        let mut entries_by_access: Vec<_> = entries.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         entries_by_access.sort_by_key(|(_, entry)| entry.last_accessed);
         
         let mut evicted_count = 0;
         let mut evicted_size = 0;
+        let mut keys_to_remove = Vec::new();
         
-        // Evict oldest entries until we're under limits
+        // Collect keys to evict until we're under limits
         for (key, entry) in entries_by_access {
             if stats.total_size_bytes <= max_size_bytes / 2 
                 && entries.len() <= self.config.max_entries as usize / 2 {
@@ -323,7 +329,12 @@ impl CacheManager {
             
             evicted_size += entry.size_bytes;
             evicted_count += 1;
-            entries.remove(key);
+            keys_to_remove.push(key);
+        }
+        
+        // Remove the keys
+        for key in keys_to_remove {
+            entries.remove(&key);
         }
         
         stats.eviction_count += evicted_count;

@@ -9,52 +9,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: vi.fn()
 }))
 
-const mockJobs = [
-  {
-    id: 'job-1',
-    name: 'Complete Vedabase Collection',
-    description: 'Process all Vedabase.io texts including Bhagavad Gita, Srimad Bhagavatam, and Upanishads',
-    priority: 'high' as const,
-    status: 'running' as const,
-    sourceCount: 12,
-    completedSources: 8,
-    totalPages: 2847,
-    processedPages: 1923,
-    startTime: new Date(Date.now() - 300000),
-    estimatedDuration: 240,
-    parallelSources: true,
-    parallelPages: false
-  },
-  {
-    id: 'job-2',
-    name: 'Classical Literature Archive',
-    description: 'Process philosophical works and commentaries',
-    priority: 'normal' as const,
-    status: 'completed' as const,
-    sourceCount: 5,
-    completedSources: 5,
-    totalPages: 1200,
-    processedPages: 1200,
-    startTime: new Date(Date.now() - 7200000),
-    endTime: new Date(Date.now() - 3600000),
-    parallelSources: false,
-    parallelPages: false
-  },
-  {
-    id: 'job-3',
-    name: 'Failed Job Collection',
-    description: 'Job that encountered errors during processing',
-    priority: 'low' as const,
-    status: 'failed' as const,
-    sourceCount: 8,
-    completedSources: 3,
-    totalPages: 2000,
-    processedPages: 900,
-    startTime: new Date(Date.now() - 1800000),
-    parallelSources: false,
-    parallelPages: false
-  }
-]
+const mockJobs = [];
 
 const mockSystemStatus = {
   processorRunning: true,

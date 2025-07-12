@@ -29,76 +29,9 @@ interface JobHistory {
   metadata?: Record<string, any>;
 }
 
-const mockJobs: ScrapingJob[] = [
-  {
-    id: '1',
-    name: 'Bhagavad Gita Complete Scrape',
-    sourceId: '1',
-    sourceName: 'Bhagavad Gita Complete',
-    status: 'running',
-    startTime: new Date(Date.now() - 2 * 60 * 1000), // 2 minutes ago
-    progress: 65,
-    totalPages: 18,
-    processedPages: 12,
-    failedPages: 0,
-    errors: [],
-    estimatedTimeRemaining: 180, // 3 minutes
-    currentUrl: 'https://vedabase.io/en/library/bg/13',
-    rateLimit: 1
-  },
-  {
-    id: '2',
-    name: 'Srimad Bhagavatam Canto 1',
-    sourceId: '2',
-    sourceName: 'Srimad Bhagavatam Canto 1',
-    status: 'pending',
-    progress: 0,
-    totalPages: 19,
-    processedPages: 0,
-    failedPages: 0,
-    errors: [],
-    rateLimit: 1
-  },
-  {
-    id: '3',
-    name: 'Philosophy Articles Collection',
-    sourceId: '3',
-    sourceName: 'Philosophy Blog',
-    status: 'completed',
-    startTime: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
-    endTime: new Date(Date.now() - 5 * 60 * 1000), // 5 minutes ago
-    progress: 100,
-    totalPages: 25,
-    processedPages: 24,
-    failedPages: 1,
-    errors: ['Failed to extract content from page: /article-23'],
-    rateLimit: 0.5
-  }
-];
+const mockJobs: ScrapingJob[] = [];
 
-const mockHistory: JobHistory[] = [
-  {
-    id: '1',
-    jobId: '1',
-    timestamp: new Date(Date.now() - 2 * 60 * 1000),
-    event: 'started',
-    message: 'Job started with 18 pages to process'
-  },
-  {
-    id: '2',
-    jobId: '3',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000),
-    event: 'completed',
-    message: 'Job completed successfully with 1 failed page'
-  },
-  {
-    id: '3',
-    jobId: '3',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    event: 'started',
-    message: 'Job started with 25 pages to process'
-  }
-];
+const mockHistory: JobHistory[] = [];
 
 export function ScrapingExecution() {
   const [jobs, setJobs] = useState<ScrapingJob[]>(mockJobs);
