@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { useLexiconStore } from './index';
-import { SourceText, Dataset, ChunkingStrategy, ExportConfig } from './types';
+import { SourceText, Dataset, ChunkingStrategy, ExportConfig, AppSettings } from './types';
 
 // Hook for managing source texts
 export const useSourceTextActions = () => {
@@ -214,6 +214,15 @@ export const useSettingsActions = () => {
     });
   }, [updateSettings]);
 
+  const updateCloudSyncSettings = useCallback((cloudSync: Partial<AppSettings['cloudSync']>) => {
+    updateSettings({ 
+      cloudSync: { 
+        ...useLexiconStore.getState().settings.cloudSync, 
+        ...cloudSync 
+      } 
+    });
+  }, [updateSettings]);
+
   return {
     updateSettings,
     resetSettings,
@@ -224,6 +233,7 @@ export const useSettingsActions = () => {
     updateDefaultChunkingStrategy,
     updateDefaultExportConfig,
     updateNotificationSettings,
+    updateCloudSyncSettings,
   };
 };
 

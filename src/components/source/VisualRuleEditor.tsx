@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Button, Input, Label, Textarea, Card, Badge } from '../ui';
 import { 
   Plus, 
@@ -49,7 +50,9 @@ export function VisualRuleEditor({ onComplete, onCancel }: VisualRuleEditorProps
     name: '',
     description: '',
     domain_patterns: [''],
-    selectors: {} as Record<string, Selector>
+    selectors: {} as Record<string, Selector>,
+    waitConditions: [] as string[],
+    transformations: {} as Record<string, string>
   });
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -69,30 +72,197 @@ export function VisualRuleEditor({ onComplete, onCancel }: VisualRuleEditorProps
   });
 
   const [selectedElements, setSelectedElements] = useState<Record<string, string>>({});
+  const [testResults, setTestResults] = useState<Record<string, any>>({});
+  const [isValidating, setIsValidating] = useState(false);
 
   const loadTestPage = async () => {
     if (!testUrl) return;
     
     setIsLoading(true);
     try {
-      // In a real implementation, this would load the page in the iframe
-      // and inject scripts to make elements selectable
-      console.log('Loading test page:', testUrl);
+      // Validate URL first
+      const isValid = await invoke<boolean>('validate_selector_urls', { urls: [testUrl] });
+      if (!isValid) {
+        throw new Error('Invalid URL provided');
+      }
+
+      // Scrape the page to analyze its structure
+      const scrapingResult = await invoke<any>('scrape_url_for_selector_testing', { 
+        url: testUrl,
+        config: {
+          followRedirects: true,
+          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+      });
+
+      if (!scrapingResult.success) {
+        throw new Error(scrapingResult.error || 'Failed to scrape URL');
+      }
+
+      // Analyze the HTML structure to suggest selectors
+      const suggestedSelectors = analyzeHtmlStructure(scrapingResult.content);
+      setSuggestedSelectors(suggestedSelectors);
       
-      // Simulate loading and selector detection
-      setTimeout(() => {
-        setSuggestedSelectors({
-          title: ['h1', '.title', '.post-title', 'h1.entry-title'],
-          content: ['.content', '.post-content', '.entry-content', 'article'],
-          author: ['.author', '.byline', '.post-author', '.author-name'],
-          date: ['.date', '.published', '.post-date', 'time'],
-          image: ['.featured-image img', '.post-image img', 'article img']
-        });
-        setIsLoading(false);
-      }, 2000);
+      setIsLoading(false);
     } catch (error) {
       console.error('Error loading test page:', error);
       setIsLoading(false);
+    }
+  };
+
+  const analyzeHtmlStructure = (htmlContent: string) => {
+    // Create a DOM parser to analyze the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    
+    const suggestions = {
+      title: [] as string[],
+      content: [] as string[],
+      author: [] as string[],
+      date: [] as string[],
+      image: [] as string[]
+    };
+
+    // Title selectors - look for common title patterns
+    const titleSelectors = [
+      'h1', 'h2', '.title', '.headline', '.post-title', 
+      '.entry-title', '.article-title', '[role="heading"]'
+    ];
+    titleSelectors.forEach(selector => {
+      if (doc.querySelector(selector)) {
+        suggestions.title.push(selector);
+      }
+    });
+
+    // Content selectors - look for main content areas
+    const contentSelectors = [
+      'article', '.content', '.post-content', '.entry-content',
+      '.article-body', '.main-content', '[role="main"]', 'main'
+    ];
+    contentSelectors.forEach(selector => {
+      if (doc.querySelector(selector)) {
+        suggestions.content.push(selector);
+      }
+    });
+
+    // Author selectors
+    const authorSelectors = [
+      '.author', '.byline', '.post-author', '.author-name',
+      '.written-by', '[rel="author"]'
+    ];
+    authorSelectors.forEach(selector => {
+      if (doc.querySelector(selector)) {
+        suggestions.author.push(selector);
+      }
+    });
+
+    // Date selectors
+    const dateSelectors = [
+      'time', '.date', '.published', '.post-date', '.publish-date',
+      '.article-date', '[datetime]'
+    ];
+    dateSelectors.forEach(selector => {
+      if (doc.querySelector(selector)) {
+        suggestions.date.push(selector);
+      }
+    });
+
+    // Image selectors
+    const imageSelectors = [
+      '.featured-image img', '.post-image img', 'article img',
+      '.hero-image img', '.header-image img'
+    ];
+    imageSelectors.forEach(selector => {
+      if (doc.querySelector(selector)) {
+        suggestions.image.push(selector);
+      }
+    });
+
+    return suggestions;
+  };
+
+  const testSelector = async (field: string, selector: string) => {
+    if (!testUrl) {
+      alert('Please load a test page first');
+      return;
+    }
+
+    try {
+      // Use the backend to test the CSS selector against the scraped content
+      const testResult = await invoke<any>('test_css_selector', {
+        url: testUrl,
+        selector: selector,
+        field: field
+      });
+
+      if (testResult.success) {
+        const element = testResult.element;
+        const preview = testResult.content ? testResult.content.substring(0, 100) : 'No content found';
+        
+        setTestResults(prev => ({
+          ...prev,
+          [field]: {
+            selector,
+            found: true,
+            preview: preview,
+            elementTag: element.tagName,
+            elementText: element.textContent?.substring(0, 50) || '',
+            attributes: element.attributes || {}
+          }
+        }));
+      } else {
+        setTestResults(prev => ({
+          ...prev,
+          [field]: {
+            selector,
+            found: false,
+            error: testResult.error || 'Selector not found'
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error testing selector:', error);
+      setTestResults(prev => ({
+        ...prev,
+        [field]: {
+          selector,
+          found: false,
+          error: 'Failed to test selector'
+        }
+      }));
+    }
+  };
+
+  const validateRule = async () => {
+    if (!testUrl) {
+      alert('Please load a test page to validate the rule');
+      return;
+    }
+
+    setIsValidating(true);
+    try {
+      // Test all selectors at once
+      const validationResult = await invoke<any>('validate_extraction_rule', {
+        url: testUrl,
+        rule: {
+          name: formData.name,
+          selectors: formData.selectors,
+          waitConditions: formData.waitConditions,
+          transformations: formData.transformations
+        }
+      });
+
+      if (validationResult.success) {
+        const extracted = validationResult.extracted;
+        alert(`Validation successful!\n\nExtracted data:\n${JSON.stringify(extracted, null, 2)}`);
+      } else {
+        alert(`Validation failed: ${validationResult.error}`);
+      }
+    } catch (error) {
+      console.error('Error validating rule:', error);
+      alert('Error validating rule: ' + error);
+    } finally {
+      setIsValidating(false);
     }
   };
 
@@ -253,20 +423,57 @@ export function VisualRuleEditor({ onComplete, onCancel }: VisualRuleEditorProps
               <div className="space-y-2">
                 {selectors.map((selector, index) => (
                   <div key={index} className="flex items-center justify-between p-2 border rounded">
-                    <code className="text-xs font-mono">{selector}</code>
-                    <Button
-                      size="sm"
-                      variant={selectedElements[type] === selector ? "default" : "outline"}
-                      onClick={() => selectElement(type, selector)}
-                    >
-                      {selectedElements[type] === selector ? (
-                        <CheckCircle className="h-3 w-3" />
-                      ) : (
-                        <Target className="h-3 w-3" />
-                      )}
-                    </Button>
+                    <code className="text-xs font-mono flex-1 mr-2">{selector}</code>
+                    <div className="flex space-x-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => testSelector(type, selector)}
+                        disabled={!testUrl}
+                        title="Test this selector"
+                      >
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant={selectedElements[type] === selector ? "default" : "outline"}
+                        onClick={() => selectElement(type, selector)}
+                      >
+                        {selectedElements[type] === selector ? (
+                          <CheckCircle className="h-3 w-3" />
+                        ) : (
+                          <Target className="h-3 w-3" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 ))}
+
+                {/* Show test results */}
+                {testResults[type] && (
+                  <div className={`mt-2 p-2 rounded text-xs ${
+                    testResults[type].found 
+                      ? 'bg-green-50 border border-green-200 text-green-700' 
+                      : 'bg-red-50 border border-red-200 text-red-700'
+                  }`}>
+                    {testResults[type].found ? (
+                      <div>
+                        <div className="font-medium flex items-center">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Found: {testResults[type].elementTag}
+                        </div>
+                        <div className="mt-1">
+                          <strong>Content:</strong> {testResults[type].preview}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="font-medium flex items-center">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {testResults[type].error || 'Element not found'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Custom selector input */}
@@ -384,20 +591,55 @@ export function VisualRuleEditor({ onComplete, onCancel }: VisualRuleEditorProps
         <Card className="p-4">
           <h4 className="font-medium mb-3">Test Results</h4>
           <div className="space-y-3">
-            {Object.entries(selectedElements).map(([type, selector]) => (
-              <div key={type} className="flex items-center justify-between p-2 border rounded">
-                <span className="capitalize text-sm">{type}</span>
-                <div className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span className="text-xs text-muted-foreground">Found</span>
+            {Object.entries(selectedElements).map(([type, selector]) => {
+              const testResult = testResults[type];
+              const hasResult = testResult && typeof testResult.found !== 'undefined';
+              
+              return (
+                <div key={type} className="flex items-center justify-between p-2 border rounded">
+                  <span className="capitalize text-sm">{type}</span>
+                  <div className="flex items-center space-x-2">
+                    {hasResult ? (
+                      testResult.found ? (
+                        <>
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-xs text-green-600">Found</span>
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="h-4 w-4 text-red-500" />
+                          <span className="text-xs text-red-600">Not Found</span>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <Eye className="h-4 w-4 text-gray-400" />
+                        <span className="text-xs text-muted-foreground">Not Tested</span>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           
-          <Button className="w-full mt-4" variant="outline">
-            <Eye className="h-4 w-4 mr-2" />
-            Run Test Extraction
+          <Button 
+            className="w-full mt-4" 
+            variant="outline"
+            onClick={validateRule}
+            disabled={isValidating || !testUrl || Object.keys(selectedElements).length === 0}
+          >
+            {isValidating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                Validating...
+              </>
+            ) : (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Run Test Extraction
+              </>
+            )}
           </Button>
         </Card>
       </div>

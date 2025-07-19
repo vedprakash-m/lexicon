@@ -23,6 +23,7 @@ class CloudProvider(Enum):
     ICLOUD = "icloud"
     GOOGLE_DRIVE = "google_drive"
     DROPBOX = "dropbox"
+    ONEDRIVE = "onedrive"
     LOCAL_ONLY = "local_only"
 
 class SyncStatus(Enum):
@@ -136,17 +137,55 @@ class CloudStorageManager:
                 if path.parent.exists():
                     paths[CloudProvider.GOOGLE_DRIVE] = path
                     break
+            
+            # OneDrive path for macOS
+            onedrive_paths = [
+                home / "OneDrive" / "Lexicon",
+                home / "Library/CloudStorage/OneDrive-Personal" / "Lexicon",
+                home / "Library/CloudStorage/OneDrive-Commercial" / "Lexicon"
+            ]
+            for path in onedrive_paths:
+                if path.parent.exists():
+                    paths[CloudProvider.ONEDRIVE] = path
+                    break
         
         elif system == "Windows":
-            # OneDrive and other Windows cloud paths
-            onedrive = home / "OneDrive" / "Lexicon"
-            if onedrive.parent.exists():
-                paths[CloudProvider.GOOGLE_DRIVE] = onedrive
+            # OneDrive paths for Windows
+            onedrive_paths = [
+                home / "OneDrive" / "Lexicon",
+                home / "OneDrive - Personal" / "Lexicon",
+                Path(os.environ.get("OneDrive", "")) / "Lexicon" if os.environ.get("OneDrive") else None
+            ]
+            for path in onedrive_paths:
+                if path and path.parent.exists():
+                    paths[CloudProvider.ONEDRIVE] = path
+                    break
+            
+            # Google Drive path for Windows
+            google_paths = [
+                home / "Google Drive" / "Lexicon",
+                home / "GoogleDrive" / "Lexicon"
+            ]
+            for path in google_paths:
+                if path.parent.exists():
+                    paths[CloudProvider.GOOGLE_DRIVE] = path
+                    break
         
         elif system == "Linux":
             # Common Linux cloud sync paths
-            cloud_path = home / "Cloud" / "Lexicon"
-            paths[CloudProvider.GOOGLE_DRIVE] = cloud_path
+            google_path = home / "GoogleDrive" / "Lexicon"
+            if google_path.parent.exists():
+                paths[CloudProvider.GOOGLE_DRIVE] = google_path
+            
+            # OneDrive via rclone or insync
+            onedrive_paths = [
+                home / "OneDrive" / "Lexicon",
+                home / "Cloud/OneDrive" / "Lexicon"
+            ]
+            for path in onedrive_paths:
+                if path.parent.exists():
+                    paths[CloudProvider.ONEDRIVE] = path
+                    break
         
         return paths
     

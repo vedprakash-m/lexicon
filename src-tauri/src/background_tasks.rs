@@ -35,6 +35,10 @@ pub enum TaskType {
     Backup,
     QualityAnalysis,
     BatchProcessing,
+    AdvancedChunking,
+    QualityAssessment,
+    RelationshipExtraction,
+    PythonPackageInstall,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
@@ -382,6 +386,18 @@ impl BackgroundTaskSystem {
             TaskType::BatchProcessing => {
                 Self::simulate_batch_processing(&task_id, progress_sender).await
             }
+            TaskType::AdvancedChunking => {
+                Self::simulate_advanced_chunking(&task_id, progress_sender).await
+            }
+            TaskType::QualityAssessment => {
+                Self::simulate_quality_assessment(&task_id, progress_sender).await
+            }
+            TaskType::RelationshipExtraction => {
+                Self::simulate_relationship_extraction(&task_id, progress_sender).await
+            }
+            TaskType::PythonPackageInstall => {
+                Self::simulate_python_package_install(&task_id, progress_sender).await
+            }
         }
     }
 
@@ -638,6 +654,114 @@ impl BackgroundTaskSystem {
             });
             
             tokio::time::sleep(Duration::from_millis(700)).await;
+        }
+
+        Ok(())
+    }
+
+    async fn simulate_advanced_chunking(
+        task_id: &str,
+        progress_sender: &mpsc::UnboundedSender<TaskProgress>,
+    ) -> Result<(), String> {
+        let steps = vec![
+            (15.0, "Initializing advanced chunking"),
+            (30.0, "Analyzing text structure"),
+            (50.0, "Applying chunking strategies"),
+            (75.0, "Optimizing chunk boundaries"),
+            (90.0, "Validating chunks"),
+            (100.0, "Advanced chunking completed"),
+        ];
+
+        for (progress, message) in steps {
+            let _ = progress_sender.send(TaskProgress {
+                task_id: task_id.to_string(),
+                progress,
+                message: message.to_string(),
+                metadata: None,
+            });
+            
+            tokio::time::sleep(Duration::from_millis(600)).await;
+        }
+
+        Ok(())
+    }
+
+    async fn simulate_quality_assessment(
+        task_id: &str,
+        progress_sender: &mpsc::UnboundedSender<TaskProgress>,
+    ) -> Result<(), String> {
+        let steps = vec![
+            (20.0, "Loading ML models"),
+            (40.0, "Analyzing text quality"),
+            (60.0, "Computing readability scores"),
+            (80.0, "Assessing coherence"),
+            (95.0, "Generating quality report"),
+            (100.0, "Quality assessment completed"),
+        ];
+
+        for (progress, message) in steps {
+            let _ = progress_sender.send(TaskProgress {
+                task_id: task_id.to_string(),
+                progress,
+                message: message.to_string(),
+                metadata: None,
+            });
+            
+            tokio::time::sleep(Duration::from_millis(800)).await;
+        }
+
+        Ok(())
+    }
+
+    async fn simulate_relationship_extraction(
+        task_id: &str,
+        progress_sender: &mpsc::UnboundedSender<TaskProgress>,
+    ) -> Result<(), String> {
+        let steps = vec![
+            (10.0, "Initializing relationship extraction"),
+            (25.0, "Computing semantic embeddings"),
+            (45.0, "Analyzing chunk similarities"),
+            (65.0, "Extracting relationships"),
+            (85.0, "Building relationship graph"),
+            (100.0, "Relationship extraction completed"),
+        ];
+
+        for (progress, message) in steps {
+            let _ = progress_sender.send(TaskProgress {
+                task_id: task_id.to_string(),
+                progress,
+                message: message.to_string(),
+                metadata: None,
+            });
+            
+            tokio::time::sleep(Duration::from_millis(700)).await;
+        }
+
+        Ok(())
+    }
+
+    async fn simulate_python_package_install(
+        task_id: &str,
+        progress_sender: &mpsc::UnboundedSender<TaskProgress>,
+    ) -> Result<(), String> {
+        let steps = vec![
+            (10.0, "Checking Python environment"),
+            (25.0, "Downloading packages"),
+            (50.0, "Installing dependencies"),
+            (75.0, "Compiling native extensions"),
+            (90.0, "Verifying installation"),
+            (100.0, "Package installation completed"),
+        ];
+
+        for (progress, message) in steps {
+            let _ = progress_sender.send(TaskProgress {
+                task_id: task_id.to_string(),
+                progress,
+                message: message.to_string(),
+                metadata: None,
+            });
+            
+            tokio::time::sleep(Duration::from_millis(1200)).await; // Longer for package installs
         }
 
         Ok(())

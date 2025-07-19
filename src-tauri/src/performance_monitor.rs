@@ -4,6 +4,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::{Mutex, RwLock};
 use serde::{Deserialize, Serialize};
 use log::{debug, info, warn, error};
+use sysinfo::{System, ProcessesToUpdate};
 
 // Helper function to convert Instant to Unix timestamp in milliseconds
 fn instant_to_timestamp(instant: Instant) -> u64 {
@@ -77,16 +78,20 @@ pub struct PerformanceMonitor {
     resource_limits: Arc<RwLock<ResourceLimits>>,
     start_time: Instant,
     monitoring_enabled: bool,
+    system: Arc<Mutex<System>>,
 }
 
 impl PerformanceMonitor {
     pub fn new() -> Self {
+        let mut system = System::new_all();
+        system.refresh_all();
+        
         let initial_metrics = PerformanceMetrics {
             cpu_usage: 0.0,
             memory_usage: 0,
-            memory_total: Self::get_total_memory(),
+            memory_total: system.total_memory(),
             disk_usage: 0,
-            disk_total: Self::get_total_disk_space(),
+            disk_total: Self::get_total_disk_space_sysinfo(&system),
             active_tasks: 0,
             completed_tasks: 0,
             average_task_duration: Duration::from_secs(0),
@@ -100,6 +105,7 @@ impl PerformanceMonitor {
             resource_limits: Arc::new(RwLock::new(ResourceLimits::default())),
             start_time: Instant::now(),
             monitoring_enabled: true,
+            system: Arc::new(Mutex::new(system)),
         }
     }
 
@@ -110,6 +116,7 @@ impl PerformanceMonitor {
 
         let metrics = Arc::clone(&self.metrics);
         let active_tasks = Arc::clone(&self.active_tasks);
+        let system = Arc::clone(&self.system);
         let start_time = self.start_time;
 
         tokio::spawn(async move {
@@ -118,9 +125,17 @@ impl PerformanceMonitor {
             loop {
                 interval.tick().await;
                 
-                let cpu_usage = Self::get_cpu_usage().await;
-                let memory_usage = Self::get_memory_usage();
-                let disk_usage = Self::get_disk_usage();
+                // Refresh system information
+                {
+                    let mut sys = system.lock().await;
+                    sys.refresh_cpu_all();
+                    sys.refresh_memory();
+                    sys.refresh_processes(ProcessesToUpdate::All);
+                }
+                
+                let cpu_usage = Self::get_cpu_usage_real(&system).await;
+                let memory_usage = Self::get_memory_usage_real(&system).await;
+                let disk_usage = Self::get_disk_usage_real().await;
                 
                 let active_count = active_tasks.read().await.len() as u32;
                 let uptime = start_time.elapsed();
@@ -149,7 +164,7 @@ impl PerformanceMonitor {
                              limits.max_concurrent_tasks));
         }
 
-        let current_memory = Self::get_memory_usage();
+        let current_memory = Self::get_memory_usage_real(&self.system).await;
         if current_memory > limits.max_memory_mb * 1024 * 1024 {
             return Err("Cannot start task: memory limit exceeded".to_string());
         }
@@ -161,7 +176,7 @@ impl PerformanceMonitor {
             end_time: None,
             duration_ms: None,
             memory_peak: current_memory,
-            cpu_peak: Self::get_cpu_usage().await,
+            cpu_peak: Self::get_cpu_usage_real(&self.system).await,
             status: TaskStatus::Running,
         };
 
@@ -261,94 +276,162 @@ impl PerformanceMonitor {
         info!("Performance optimization: Configured for maximum performance");
     }
 
-    // System metrics collection methods
-    async fn get_cpu_usage() -> f64 {
-        // Simplified CPU usage - in production, use sysinfo crate
-        use std::process::Command;
-        
-        if cfg!(target_os = "macos") {
-            if let Ok(output) = Command::new("top")
-                .args(&["-l", "1", "-n", "1"])
-                .output()
-            {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                // Parse CPU usage from top command output
-                // This is a simplified implementation
-                return 15.0; // Placeholder value
-            }
+    // Real system metrics collection methods using sysinfo
+    async fn get_cpu_usage_real(system: &Arc<Mutex<System>>) -> f64 {
+        let sys = system.lock().await;
+        let cpus = sys.cpus();
+        if cpus.is_empty() {
+            return 0.0;
         }
         
-        0.0
+        let total_usage: f64 = cpus.iter().map(|cpu| cpu.cpu_usage() as f64).sum();
+        total_usage / cpus.len() as f64
     }
 
-    fn get_memory_usage() -> u64 {
-        // Simplified memory usage - in production, use sysinfo crate
-        use std::process::Command;
-        
-        if cfg!(target_os = "macos") {
-            if let Ok(output) = Command::new("vm_stat").output() {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                // Parse memory usage from vm_stat output
-                // This is a simplified implementation
-                return 512 * 1024 * 1024; // 512MB placeholder
+    async fn get_memory_usage_real(system: &Arc<Mutex<System>>) -> u64 {
+        let sys = system.lock().await;
+        sys.used_memory()
+    }
+
+    async fn get_disk_usage_real() -> u64 {
+        // Get current working directory disk usage
+        match std::env::current_dir() {
+            Ok(current_dir) => {
+                // Use du command for accurate disk usage of current directory
+                if cfg!(target_os = "macos") {
+                    use std::process::Command;
+                    if let Ok(output) = Command::new("du")
+                        .args(&["-sk", current_dir.to_str().unwrap_or(".")])
+                        .output()
+                    {
+                        let output_str = String::from_utf8_lossy(&output.stdout);
+                        if let Some(first_line) = output_str.lines().next() {
+                            if let Some(size_str) = first_line.split_whitespace().next() {
+                                if let Ok(size_kb) = size_str.parse::<u64>() {
+                                    return size_kb * 1024; // Convert KB to bytes
+                                }
+                            }
+                        }
+                    }
+                }
+                0
             }
+            Err(_) => 0,
         }
-        
-        0
     }
 
-    fn get_total_memory() -> u64 {
-        // Get total system memory
+    fn get_total_disk_space_sysinfo(system: &System) -> u64 {
+        // Fallback to a default approach using system commands for macOS
         if cfg!(target_os = "macos") {
             use std::process::Command;
-            if let Ok(output) = Command::new("sysctl")
-                .args(&["-n", "hw.memsize"])
+            if let Ok(output) = Command::new("df")
+                .args(&["-k", "."])
                 .output()
             {
-                if let Ok(memory_str) = String::from_utf8(output.stdout) {
-                    if let Ok(memory_bytes) = memory_str.trim().parse::<u64>() {
-                        return memory_bytes;
+                let output_str = String::from_utf8_lossy(&output.stdout);
+                // Parse the second line (first is header)
+                if let Some(data_line) = output_str.lines().nth(1) {
+                    let parts: Vec<&str> = data_line.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        if let Ok(total_kb) = parts[1].parse::<u64>() {
+                            return total_kb * 1024; // Convert KB to bytes
+                        }
                     }
                 }
             }
         }
         
-        8 * 1024 * 1024 * 1024 // 8GB default
+        // Ultimate fallback
+        1024 * 1024 * 1024 * 1024 // 1TB default
+    }
+
+    // Legacy methods for backward compatibility - now use real implementations
+    async fn get_cpu_usage() -> f64 {
+        // Create a temporary System instance for this call
+        let mut system = System::new();
+        system.refresh_cpu_all();
+        
+        // Wait a moment for CPU measurement
+        tokio::time::sleep(Duration::from_millis(200)).await;
+        system.refresh_cpu_all();
+        
+        let cpus = system.cpus();
+        if cpus.is_empty() {
+            return 0.0;
+        }
+        
+        let total_usage: f64 = cpus.iter().map(|cpu| cpu.cpu_usage() as f64).sum();
+        total_usage / cpus.len() as f64
+    }
+
+    fn get_memory_usage() -> u64 {
+        let mut system = System::new();
+        system.refresh_memory();
+        system.used_memory()
+    }
+
+    fn get_total_memory() -> u64 {
+        let mut system = System::new();
+        system.refresh_memory();
+        system.total_memory()
     }
 
     fn get_disk_usage() -> u64 {
-        // Get current disk usage for app directory
-        use std::process::Command;
-        
-        if cfg!(target_os = "macos") {
-            if let Ok(output) = Command::new("du")
-                .args(&["-s", "."])
-                .output()
-            {
-                let output_str = String::from_utf8_lossy(&output.stdout);
-                // Parse disk usage
-                return 100 * 1024 * 1024; // 100MB placeholder
+        // Use the async version synchronously for compatibility
+        let rt = tokio::runtime::Handle::try_current();
+        if let Ok(handle) = rt {
+            tokio::task::block_in_place(|| {
+                handle.block_on(Self::get_disk_usage_real())
+            })
+        } else {
+            // Fallback for when not in async context
+            match std::env::current_dir() {
+                Ok(current_dir) => {
+                    if cfg!(target_os = "macos") {
+                        use std::process::Command;
+                        if let Ok(output) = Command::new("du")
+                            .args(&["-sk", current_dir.to_str().unwrap_or(".")])
+                            .output()
+                        {
+                            let output_str = String::from_utf8_lossy(&output.stdout);
+                            if let Some(first_line) = output_str.lines().next() {
+                                if let Some(size_str) = first_line.split_whitespace().next() {
+                                    if let Ok(size_kb) = size_str.parse::<u64>() {
+                                        return size_kb * 1024;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    0
+                }
+                Err(_) => 0,
             }
         }
-        
-        0
     }
 
     fn get_total_disk_space() -> u64 {
-        // Get total disk space
+        // Use system commands for disk space on macOS
         if cfg!(target_os = "macos") {
             use std::process::Command;
             if let Ok(output) = Command::new("df")
-                .args(&["-h", "."])
+                .args(&["-k", "."])
                 .output()
             {
                 let output_str = String::from_utf8_lossy(&output.stdout);
-                // Parse total disk space
-                return 512 * 1024 * 1024 * 1024; // 512GB placeholder
+                // Parse the second line (first is header)
+                if let Some(data_line) = output_str.lines().nth(1) {
+                    let parts: Vec<&str> = data_line.split_whitespace().collect();
+                    if parts.len() >= 2 {
+                        if let Ok(total_kb) = parts[1].parse::<u64>() {
+                            return total_kb * 1024; // Convert KB to bytes
+                        }
+                    }
+                }
             }
         }
         
-        512 * 1024 * 1024 * 1024 // 512GB default
+        1024 * 1024 * 1024 * 1024 // 1TB default
     }
 
     pub async fn cleanup_old_metrics(&self) {

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { screen, waitFor } from '@testing-library/react';
+import { renderWithProviders } from '../utils/test-utils';
 import AppContent from '../components/AppContent';
 import { useLexiconStore } from '../../store';
 
@@ -37,25 +36,11 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 });
 
-// Create a test query client
-const createTestQueryClient = () => new QueryClient({
-  defaultOptions: {
-    queries: { retry: false },
-    mutations: { retry: false },
-  },
-});
-
 // Helper function to render the app with providers
 const renderApp = (initialRoute = '/') => {
-  const queryClient = createTestQueryClient();
-  
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[initialRoute]}>
-        <AppContent />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return renderWithProviders(<AppContent />, {
+    initialEntries: [initialRoute],
+  });
 };
 
 describe('Integration Tests - Full Workflow', () => {

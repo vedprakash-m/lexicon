@@ -62,8 +62,7 @@ function MinimalApp() {
         
         <button 
           onClick={() => {
-            alert('JavaScript is working perfectly!');
-            console.log('Button clicked - everything working!');
+            console.log('JavaScript is working perfectly! Test button clicked.');
           }}
           style={{
             backgroundColor: '#10b981',
@@ -75,7 +74,7 @@ function MinimalApp() {
             cursor: 'pointer'
           }}
         >
-          Test Alert
+          Test Console Log
         </button>
       </div>
       

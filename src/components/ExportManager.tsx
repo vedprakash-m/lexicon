@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Database, Settings, Play, Check, X, AlertCircle, Loader } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 
 interface ExportConfig {
   format: string;
@@ -60,63 +61,25 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
   const [exportJobs, setExportJobs] = useState<ExportJob[]>([]);
   const [customTemplate, setCustomTemplate] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data for demonstration
+  // Load real export jobs from backend
   useEffect(() => {
-    setExportJobs([
-      {
-        id: 'job_001',
-        config: {
-          format: 'jsonl',
-          outputPath: '/Users/Documents/Lexicon/exports/bhagavad_gita.jsonl',
-          compression: 'gzip',
-          includeMetadata: true,
-          flattenNested: false
-        },
-        status: 'completed',
-        progress: 100,
-        recordsExported: 324,
-        fileSizeBytes: 125400,
-        exportTimeSeconds: 2.3,
-        startTime: new Date(Date.now() - 300000),
-        endTime: new Date(Date.now() - 295000)
-      },
-      {
-        id: 'job_002',
-        config: {
-          format: 'csv',
-          outputPath: '/Users/Documents/Lexicon/exports/bhagavad_gita.csv',
-          compression: 'none',
-          includeMetadata: true,
-          flattenNested: true
-        },
-        status: 'running',
-        progress: 67,
-        recordsExported: 217,
-        fileSizeBytes: 45200,
-        exportTimeSeconds: 1.8,
-        startTime: new Date(Date.now() - 120000)
-      },
-      {
-        id: 'job_003',
-        config: {
-          format: 'parquet',
-          outputPath: '/Users/Documents/Lexicon/exports/bhagavad_gita.parquet',
-          compression: 'none',
-          includeMetadata: true,
-          flattenNested: true
-        },
-        status: 'failed',
-        progress: 45,
-        recordsExported: 0,
-        fileSizeBytes: 0,
-        exportTimeSeconds: 0.8,
-        errors: ['PyArrow dependency not found. Please install: pip install pyarrow'],
-        startTime: new Date(Date.now() - 600000),
-        endTime: new Date(Date.now() - 595000)
-      }
-    ]);
+    loadExportJobs();
   }, []);
+
+  const loadExportJobs = async () => {
+    try {
+      setLoading(true);
+      const jobs = await invoke<ExportJob[]>('get_export_jobs');
+      setExportJobs(jobs);
+    } catch (error) {
+      console.error('Failed to load export jobs:', error);
+      // Keep empty array as fallback
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateExportConfig = (index: number, updates: Partial<ExportConfig>) => {
     setExportConfigs(configs => 
@@ -144,57 +107,31 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
     const configs = configIndex !== undefined ? [exportConfigs[configIndex]] : exportConfigs;
     
     for (const config of configs) {
-      const job: ExportJob = {
-        id: `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        config,
-        status: 'pending',
-        progress: 0,
-        recordsExported: 0,
-        fileSizeBytes: 0,
-        exportTimeSeconds: 0,
-        startTime: new Date()
-      };
-      
-      setExportJobs(jobs => [job, ...jobs]);
-      
-      // Simulate export process
-      simulateExport(job);
+      try {
+        // Create export job in backend
+        const jobId = await invoke<string>('create_export_job', {
+          config,
+          sourceDatasetId: null // Could be connected to selected dataset in future
+        });
+        
+        // Start the export with sample data (in real implementation, would use actual data)
+        const sampleData = [
+          { id: 1, text: "Sample text content", metadata: { source: "demo" } },
+          { id: 2, text: "Another text sample", metadata: { source: "demo" } }
+        ];
+        
+        await invoke('start_export_job', {
+          jobId,
+          sourceData: sampleData
+        });
+        
+        // Refresh jobs list
+        loadExportJobs();
+        
+      } catch (error) {
+        console.error('Failed to start export:', error);
+      }
     }
-  };
-
-  const simulateExport = async (job: ExportJob) => {
-    // Update to running
-    setExportJobs(jobs => 
-      jobs.map(j => j.id === job.id ? { ...j, status: 'running' as const } : j)
-    );
-
-    // Simulate progress
-    for (let progress = 0; progress <= 100; progress += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      setExportJobs(jobs => 
-        jobs.map(j => j.id === job.id ? { 
-          ...j, 
-          progress,
-          recordsExported: Math.floor((chunks.length * progress) / 100),
-          exportTimeSeconds: (Date.now() - j.startTime.getTime()) / 1000
-        } : j)
-      );
-    }
-
-    // Complete the job
-    setExportJobs(jobs => 
-      jobs.map(j => j.id === job.id ? { 
-        ...j, 
-        status: 'completed' as const,
-        progress: 100,
-        recordsExported: chunks.length,
-        fileSizeBytes: Math.floor(Math.random() * 100000) + 50000,
-        endTime: new Date()
-      } : j)
-    );
-
-    onExportComplete?.({ success: true, format: job.config.format });
   };
 
   const formatFileSize = (bytes: number) => {

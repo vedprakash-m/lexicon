@@ -212,21 +212,21 @@ mod tests {
         let data = b"test_data".to_vec();
         
         store_in_cache(
-            tauri::State::from(&cache_manager),
+            cache_manager.clone(),
             key.clone(),
             data.clone(),
             None,
         ).await.unwrap();
         
         let retrieved = get_cached_data(
-            tauri::State::from(&cache_manager),
+            cache_manager.clone(),
             key,
         ).await.unwrap().unwrap();
         
         assert_eq!(retrieved, data);
         
         // Test stats
-        let stats = get_cache_stats(tauri::State::from(&cache_manager)).await.unwrap();
+        let stats = get_cache_stats(cache_manager.clone()).await.unwrap();
         assert_eq!(stats.total_entries, 1);
         assert_eq!(stats.hit_count, 1);
     }
@@ -244,11 +244,11 @@ mod tests {
         };
         
         update_cache_config(
-            tauri::State::from(&cache_manager),
+            cache_manager.clone(),
             config_update,
         ).await.unwrap();
         
-        let updated_config = get_cache_config(tauri::State::from(&cache_manager)).await.unwrap();
+        let updated_config = get_cache_config(cache_manager.clone()).await.unwrap();
         assert_eq!(updated_config.max_size_mb, 1000);
         assert_eq!(updated_config.max_entries, 50000);
         assert_eq!(updated_config.enable_http_cache, false);
@@ -260,7 +260,7 @@ mod tests {
         let cache_manager = create_test_cache_manager().await;
         
         let recommendations = get_cache_recommendations(
-            tauri::State::from(&cache_manager)
+            cache_manager.clone()
         ).await.unwrap();
         
         assert!(!recommendations.is_empty());

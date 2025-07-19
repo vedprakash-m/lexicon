@@ -59,6 +59,10 @@ impl PythonManager {
             "version_check".to_string(),
             include_str!("../scripts/version_check.py")
         );
+        embedded_scripts.insert(
+            "quality_assessment".to_string(),
+            include_str!("../scripts/quality_assessment.py")
+        );
 
         Self {
             app_data_dir,
@@ -233,6 +237,78 @@ impl PythonManager {
             Err(PythonManagerError::ProcessExecutionFailed(result.stderr))
         }
     }
+
+    /// Install Python packages using the dependency installer
+    pub async fn install_packages(&self, packages: Vec<String>, upgrade: bool) -> Result<PythonProcessResult, PythonManagerError> {
+        let mut args = vec!["--packages".to_string()];
+        args.extend(packages);
+        
+        if upgrade {
+            args.push("--upgrade".to_string());
+        }
+        
+        self.execute_script("dependency_installer", args).await
+    }
+
+    /// Install core Lexicon dependencies
+    pub async fn install_core_dependencies(&self, upgrade: bool) -> Result<PythonProcessResult, PythonManagerError> {
+        let mut args = vec!["--install-core".to_string()];
+        
+        if upgrade {
+            args.push("--upgrade".to_string());
+        }
+        
+        self.execute_script("dependency_installer", args).await
+    }
+
+    /// Check package installation status
+    pub async fn check_package_installation(&self, packages: Vec<String>) -> Result<HashMap<String, serde_json::Value>, PythonManagerError> {
+        let mut args = vec!["--check-only".to_string(), "--packages".to_string()];
+        args.extend(packages);
+        
+        let result = self.execute_script("dependency_installer", args).await?;
+        
+        if result.success {
+            let check_data: HashMap<String, serde_json::Value> = serde_json::from_str(&result.stdout)
+                .unwrap_or_else(|_| HashMap::new());
+            Ok(check_data)
+        } else {
+            Err(PythonManagerError::ProcessExecutionFailed(result.stderr))
+        }
+    }
+
+    /// Assess quality of text chunks using ML models
+    pub async fn assess_chunk_quality(&self, text: String) -> Result<serde_json::Value, PythonManagerError> {
+        let args = vec!["--text".to_string(), text];
+        
+        let result = self.execute_script("quality_assessment", args).await?;
+        
+        if result.success {
+            let assessment: serde_json::Value = serde_json::from_str(&result.stdout)
+                .map_err(|e| PythonManagerError::ProcessExecutionFailed(format!("Failed to parse quality assessment: {}", e)))?;
+            Ok(assessment)
+        } else {
+            Err(PythonManagerError::ProcessExecutionFailed(result.stderr))
+        }
+    }
+
+    /// Assess relationships between chunks
+    pub async fn assess_chunk_relationships(&self, chunks: Vec<serde_json::Value>) -> Result<serde_json::Value, PythonManagerError> {
+        let chunks_json = serde_json::to_string(&chunks)
+            .map_err(|e| PythonManagerError::ProcessExecutionFailed(format!("Failed to serialize chunks: {}", e)))?;
+        
+        let args = vec!["--chunks".to_string(), chunks_json, "--assess-relationships".to_string()];
+        
+        let result = self.execute_script("quality_assessment", args).await?;
+        
+        if result.success {
+            let relationships: serde_json::Value = serde_json::from_str(&result.stdout)
+                .map_err(|e| PythonManagerError::ProcessExecutionFailed(format!("Failed to parse relationships: {}", e)))?;
+            Ok(relationships)
+        } else {
+            Err(PythonManagerError::ProcessExecutionFailed(result.stderr))
+        }
+    }
 }
 
 /// Global Python manager state for Tauri
@@ -288,4 +364,50 @@ pub async fn get_python_environment_info(
 ) -> Result<Option<PythonEnvironment>, String> {
     let manager = manager.lock().await;
     Ok(manager.get_current_environment().cloned())
+}
+
+#[tauri::command]
+pub async fn install_python_packages(
+    manager: State<'_, PythonManagerState>,
+    packages: Vec<String>,
+    upgrade: Option<bool>,
+) -> Result<PythonProcessResult, String> {
+    let manager = manager.lock().await;
+    manager.install_packages(packages, upgrade.unwrap_or(false)).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn install_core_python_dependencies(
+    manager: State<'_, PythonManagerState>,
+    upgrade: Option<bool>,
+) -> Result<PythonProcessResult, String> {
+    let manager = manager.lock().await;
+    manager.install_core_dependencies(upgrade.unwrap_or(false)).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn check_python_packages(
+    manager: State<'_, PythonManagerState>,
+    packages: Vec<String>,
+) -> Result<HashMap<String, serde_json::Value>, String> {
+    let manager = manager.lock().await;
+    manager.check_package_installation(packages).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn assess_text_quality(
+    manager: State<'_, PythonManagerState>,
+    text: String,
+) -> Result<serde_json::Value, String> {
+    let manager = manager.lock().await;
+    manager.assess_chunk_quality(text).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn assess_chunk_relationships(
+    manager: State<'_, PythonManagerState>,
+    chunks: Vec<serde_json::Value>,
+) -> Result<serde_json::Value, String> {
+    let manager = manager.lock().await;
+    manager.assess_chunk_relationships(chunks).await.map_err(|e| e.to_string())
 }

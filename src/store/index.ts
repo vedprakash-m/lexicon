@@ -25,10 +25,21 @@ const defaultSettings: AppSettings = {
   backupFrequency: 'weekly',
   defaultChunkingStrategy,
   defaultExportConfig,
+  cloudSync: {
+    enabled: false,
+    provider: 'none',
+    autoSync: true,
+    syncInterval: 5, // 5 minutes
+    encryption: true,
+    compression: true,
+    syncPatterns: ['*.db', '*.json', 'enrichment_*.json', 'catalog_*.json'],
+    excludePatterns: ['*.tmp', '*.log', 'cache_*', 'temp_*'],
+  },
   notifications: {
     processingComplete: true,
     errors: true,
     updates: false,
+    cloudSync: true,
   },
 };
 

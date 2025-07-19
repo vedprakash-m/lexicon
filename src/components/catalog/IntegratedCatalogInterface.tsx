@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { 
   Search, 
   Filter, 
@@ -25,9 +26,14 @@ import { useCatalogManager, BookMetadata, CatalogFilters } from '../../hooks/use
 import { Button } from '../ui';
 import { cn } from '../../lib/utils';
 import { FileUploadDialog } from './FileUploadDialog';
+import { useToast, useToastActions } from '../ui/toast';
+import BookCover from '../BookCover';
 
 // Integrated Enhanced Catalog Interface with backend integration
 const IntegratedCatalogInterface = () => {
+  const { addToast } = useToast();
+  const toast = useToastActions();
+  
   const { 
     books: allBooks, 
     stats, 
@@ -162,11 +168,116 @@ const IntegratedCatalogInterface = () => {
     }
   };
 
-  const handleFileUpload = async (files: File[]) => {
-    console.log('Files to upload:', files);
-    // TODO: Implement actual file upload to backend
-    // For now, just show a success message
-    alert(`${files.length} file(s) selected for upload. Upload functionality will be implemented.`);
+  // Enhanced file upload handler with retry mechanism and better error handling  
+  const handleFileUpload = async (files: File[], retryAttempt = 0) => {
+    const maxRetries = 2;
+    const isRetry = retryAttempt > 0;
+    
+    console.log(`${isRetry ? 'Retrying' : 'Starting'} upload of ${files.length} file(s)${isRetry ? ` (attempt ${retryAttempt + 1}/${maxRetries + 1})` : ''}`);
+    
+    if (!isRetry) {
+      setLoading(true);
+    }
+    
+    try {
+      // Convert File objects to base64 and save them using Tauri's file system
+      const uploadPromises = files.map(async (file) => {
+        // Read file as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // Convert to base64 for Tauri transfer
+        const base64Data = btoa(String.fromCharCode(...uint8Array));
+        
+        // Create a file path for the uploaded file
+        const fileName = file.name;
+        const filePath = `uploads/${fileName}`;
+        
+        // Save the file using Tauri's write_file command
+        await invoke('write_file', {
+          request: {
+            path: filePath,
+            data: base64Data,
+            is_binary: true,
+          }
+        });
+        
+        // Now create the source text entry
+        return invoke('upload_book_from_file', {
+          uploadRequest: {
+            file_name: fileName,
+            file_path: filePath,
+            file_size: file.size,
+            title: null, // Will be extracted from filename
+            author: null, // Can be filled later
+          }
+        });
+      });
+      
+      const results = await Promise.all(uploadPromises);
+      const successCount = results.filter((result: any) => result.success).length;
+      const failedCount = files.length - successCount;
+      
+      if (successCount > 0) {
+        // Refresh the catalog to show new books
+        await refreshCatalog();
+        
+        if (failedCount > 0) {
+          toast.warning(
+            'Partial Upload Success',
+            `${successCount} of ${files.length} books uploaded successfully. ${failedCount} failed.`
+          );
+        } else {
+          toast.success(
+            'Upload Complete',
+            `Successfully added ${successCount} book${successCount > 1 ? 's' : ''} to your catalog!`
+          );
+        }
+      } else {
+        // All uploads failed - offer retry if not already retrying at max attempts
+        if (retryAttempt < maxRetries) {
+          addToast({
+            title: 'Upload Failed',
+            description: 'Failed to upload books. Click Retry to try again.',
+            type: 'error',
+            action: {
+              label: 'Retry Upload',
+              onClick: () => handleFileUpload(files, retryAttempt + 1)
+            }
+          });
+        } else {
+          toast.error(
+            'Upload Failed',
+            'Failed to add books after multiple attempts. Please check the console for details.'
+          );
+          console.error('Upload results after retries:', results);
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Upload failed${isRetry ? ` on retry ${retryAttempt + 1}` : ''}:`, error);
+      
+      if (retryAttempt < maxRetries) {
+        addToast({
+          title: 'Upload Error',
+          description: `Upload failed: ${error}. Click Retry to try again.`,
+          type: 'error',
+          action: {
+            label: 'Retry Upload',
+            onClick: () => handleFileUpload(files, retryAttempt + 1)
+          }
+        });
+      } else {
+        toast.error(
+          'Upload Error',
+          `Failed to upload books after multiple attempts: ${error}`
+        );
+      }
+    } finally {
+      if (!isRetry) {
+        setLoading(false);
+      }
+    }
   };
 
   const BookCard = ({ book }: { book: BookMetadata }) => (
@@ -176,20 +287,16 @@ const IntegratedCatalogInterface = () => {
     >
       {/* Cover Image */}
       <div className="relative h-64 bg-gray-200 overflow-hidden">
-        {book.cover_image ? (
-          <img 
-            src={book.cover_image} 
-            alt={book.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            onError={(e) => {
-              e.currentTarget.src = '/api/placeholder-cover.jpg';
-            }}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <BookOpen size={48} />
-          </div>
-        )}
+        <BookCover
+          bookId={book.id}
+          title={book.title}
+          authors={book.authors.map(a => a.name)}
+          isbn={book.isbn_13 || book.isbn_10}
+          size="medium"
+          className="w-full h-full"
+          showRefreshButton={false}
+          fallbackType="placeholder"
+        />
         
         {/* Quality Badge */}
         {book.quality_score && (
@@ -288,20 +395,16 @@ const IntegratedCatalogInterface = () => {
     >
       {/* Cover Thumbnail */}
       <div className="w-16 h-20 bg-gray-200 rounded mr-4 flex-shrink-0 overflow-hidden">
-        {book.cover_image ? (
-          <img 
-            src={book.cover_image} 
-            alt={book.title}
-            className="w-full h-full object-cover"
-            onError={(e) => {
-              e.currentTarget.src = '/api/placeholder-cover.jpg';
-            }}
-          />
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <BookOpen size={20} />
-          </div>
-        )}
+        <BookCover
+          bookId={book.id}
+          title={book.title}
+          authors={book.authors.map(a => a.name)}
+          isbn={book.isbn_13 || book.isbn_10}
+          size="small"
+          className="w-full h-full"
+          showRefreshButton={false}
+          fallbackType="icon"
+        />
       </div>
 
       {/* Content */}
@@ -432,17 +535,16 @@ const IntegratedCatalogInterface = () => {
               {/* Cover and basic info */}
               <div>
                 <div className="w-full h-80 bg-gray-200 rounded mb-4 overflow-hidden">
-                  {book.cover_image ? (
-                    <img 
-                      src={book.cover_image} 
-                      alt={book.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-full text-gray-400">
-                      <BookOpen size={64} />
-                    </div>
-                  )}
+                  <BookCover
+                    bookId={book.id}
+                    title={book.title}
+                    authors={book.authors.map(a => a.name)}
+                    isbn={book.isbn_13 || book.isbn_10}
+                    size="large"
+                    className="w-full h-full"
+                    showRefreshButton={true}
+                    fallbackType="placeholder"
+                  />
                 </div>
 
                 {/* Metrics */}

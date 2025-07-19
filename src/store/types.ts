@@ -108,10 +108,21 @@ export interface AppSettings {
   pythonPath?: string;
   defaultChunkingStrategy: ChunkingStrategy;
   defaultExportConfig: ExportConfig;
+  cloudSync: {
+    enabled: boolean;
+    provider: 'none' | 'icloud' | 'google_drive' | 'dropbox' | 'onedrive';
+    autoSync: boolean;
+    syncInterval: number; // minutes
+    encryption: boolean;
+    compression: boolean;
+    syncPatterns: string[];
+    excludePatterns: string[];
+  };
   notifications: {
     processingComplete: boolean;
     errors: boolean;
     updates: boolean;
+    cloudSync: boolean;
   };
 }
 

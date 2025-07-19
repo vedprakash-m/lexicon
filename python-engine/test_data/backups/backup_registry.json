@@ -1,0 +1,23 @@
+{
+  "backup_20250714_022954": {
+    "backup_id": "backup_20250714_022954",
+    "timestamp": "2025-07-14T02:29:54.163490+00:00",
+    "backup_type": "automatic",
+    "status": "completed",
+    "file_path": "../test_data/backups/backup_20250714_022954.zip",
+    "size_bytes": 1344,
+    "checksum": "5070e9f1207f385392b7d2e9a83ecbc285942fa38ee3a823446519d872c49acd",
+    "description": "Automatic backup cycle",
+    "files_included": [
+      "relationship_mapping.json",
+      "enrichment_demo_results.json",
+      "catalog_metadata.json",
+      "restored/relationship_mapping.json",
+      "restored/enrichment_demo_results.json",
+      "restored/catalog_metadata.json"
+    ],
+    "version": "1.0",
+    "compressed": true,
+    "encrypted": false
+  }
+}

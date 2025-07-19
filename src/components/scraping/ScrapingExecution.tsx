@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Play, Pause, Square, RefreshCw, Clock, CheckCircle, AlertCircle, XCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { FileText, Play, Pause, Square, RotateCcw, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { Button, Card, Badge, Progress, Tabs, TabList, Tab, TabPanels, TabPanel } from '../ui';
 
 interface ScrapingJob {
@@ -29,36 +30,52 @@ interface JobHistory {
   metadata?: Record<string, any>;
 }
 
-const mockJobs: ScrapingJob[] = [];
-
-const mockHistory: JobHistory[] = [];
-
 export function ScrapingExecution() {
-  const [jobs, setJobs] = useState<ScrapingJob[]>(mockJobs);
-  const [history, setHistory] = useState<JobHistory[]>(mockHistory);
+  const [jobs, setJobs] = useState<ScrapingJob[]>([]);
+  const [history, setHistory] = useState<JobHistory[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Simulate real-time updates for running jobs
+  // Load real scraping jobs from backend
+  useEffect(() => {
+    loadScrapingJobs();
+    loadScrapingHistory();
+  }, []);
+
+  const loadScrapingJobs = async () => {
+    try {
+      setLoading(true);
+      const activeJobs = await invoke<ScrapingJob[]>('get_active_scraping_jobs');
+      setJobs(activeJobs);
+    } catch (error) {
+      console.error('Failed to load scraping jobs:', error);
+      // Keep empty array as fallback
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadScrapingHistory = async () => {
+    try {
+      // For now, we'll create a simple history from completed jobs
+      // In a full implementation, there would be a separate history endpoint
+      const recentJobs = await invoke<any[]>('get_scraping_progress') || [];
+      setHistory(recentJobs.filter((job: any) => job.status === 'completed' || job.status === 'failed'));
+    } catch (error) {
+      console.error('Failed to load scraping history:', error);
+    }
+  };
+
+  // Real-time updates for active scraping jobs
   useEffect(() => {
     const interval = setInterval(() => {
-      setJobs(prevJobs => 
-        prevJobs.map(job => {
-          if (job.status === 'running' && job.progress < 100) {
-            const newProgress = Math.min(100, job.progress + Math.random() * 5);
-            const newProcessedPages = Math.floor((newProgress / 100) * job.totalPages);
-            return {
-              ...job,
-              progress: newProgress,
-              processedPages: newProcessedPages,
-              estimatedTimeRemaining: Math.max(0, job.estimatedTimeRemaining! - 5)
-            };
-          }
-          return job;
-        })
-      );
+      // Only refresh if we have active jobs
+      if (jobs.some(job => job.status === 'running' || job.status === 'pending')) {
+        loadScrapingJobs();
+      }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [jobs]);
 
   const getStatusIcon = (status: ScrapingJob['status']) => {
     switch (status) {
@@ -98,36 +115,33 @@ export function ScrapingExecution() {
     }
   };
 
-  const handleJobAction = (jobId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
-    setJobs(prevJobs =>
-      prevJobs.map(job => {
-        if (job.id === jobId) {
-          switch (action) {
-            case 'start':
-              return { ...job, status: 'running', startTime: new Date() };
-            case 'pause':
-              return { ...job, status: 'paused' };
-            case 'resume':
-              return { ...job, status: 'running' };
-            case 'cancel':
-              return { ...job, status: 'cancelled', endTime: new Date() };
-            default:
-              return job;
-          }
-        }
-        return job;
-      })
-    );
-
-    // Add to history
-    const newHistoryEntry: JobHistory = {
-      id: Date.now().toString(),
-      jobId,
-      timestamp: new Date(),
-      event: action === 'resume' ? 'resumed' : action as any,
-      message: `Job ${action}${action === 'start' ? 'ed' : action === 'pause' ? 'd' : action === 'resume' ? 'd' : 'led'}`
-    };
-    setHistory(prev => [newHistoryEntry, ...prev]);
+  const handleJobAction = async (jobId: string, action: 'start' | 'pause' | 'resume' | 'cancel') => {
+    try {
+      switch (action) {
+        case 'cancel':
+          await invoke('cancel_scraping_job', { jobId });
+          break;
+        case 'pause':
+          // Note: Pause functionality would need to be implemented in backend
+          console.warn('Pause functionality not yet implemented in backend');
+          break;
+        case 'resume':
+          // Note: Resume functionality would need to be implemented in backend
+          console.warn('Resume functionality not yet implemented in backend');
+          break;
+        case 'start':
+          // This would typically be handled by the job creation process
+          console.warn('Start functionality handled during job creation');
+          break;
+      }
+      
+      // Refresh jobs after action
+      loadScrapingJobs();
+      loadScrapingHistory();
+      
+    } catch (error) {
+      console.error(`Failed to ${action} scraping job:`, error);
+    }
   };
 
   const runningJobs = jobs.filter(job => job.status === 'running');
