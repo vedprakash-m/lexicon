@@ -163,6 +163,7 @@ tmp/
 # Data files - exclude all data to avoid copyright issues
 /data/
 /legacy/
+/test_data/
 *.db
 *.sqlite
 *.sqlite3
