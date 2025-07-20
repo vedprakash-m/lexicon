@@ -6,7 +6,7 @@
 
 import React, { Fragment } from 'react';
 import { Tab as HeadlessTab } from '@headlessui/react';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 
 export interface TabsProps {
   defaultIndex?: number;

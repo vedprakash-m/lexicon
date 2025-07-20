@@ -1,24 +1,24 @@
-name: Lexicon Desktop CI/CD
+name: Lexicon CI/CD Pipeline
 
 on:
   push:
     branches: [ main, develop ]
-    tags: [ 'v*' ]  # Trigger on version tags like v1.0.0
   pull_request:
     branches: [ main ]
+  release:
+    types: [ published ]
 
 env:
-  NODE_VERSION: '20'
-  RUST_VERSION: 'stable'
+  NODE_VERSION: '18'
 
 jobs:
-  # Comprehensive Quality Assurance
-  quality-assurance:
+  # Quality Assurance - runs your current test suite
+  quality-check:
     runs-on: ubuntu-latest
-    name: 🧪 Quality Assurance
+    name: Quality Assurance
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Setup Node.js
@@ -30,52 +30,81 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Code linting
+      - name: Lint code
         run: npm run lint
         
-      - name: TypeScript type checking
+      - name: Type checking
         run: npx tsc --noEmit
         
-      - name: Run test suite
+      - name: Run tests
         run: npm run test:run
         
-      - name: Generate test coverage
+      - name: Test coverage
         run: npm run test:coverage
         
-      - name: Build frontend for production
+      - name: Build web application
         run: npm run build
         
-      - name: Validate Tauri configuration
-        run: npx @tauri-apps/cli info
-        
-      - name: Upload test coverage
+      - name: Upload coverage reports
         uses: codecov/codecov-action@v3
         if: success()
-        with:
-          file: ./coverage/lcov.info
-          flags: unittests
-          name: lexicon-coverage
 
-  # macOS Desktop App Builds
-  build-macos:
-    needs: quality-assurance
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+  # Web Deployment - your React app with service worker
+  deploy-web:
+    needs: quality-check
+    runs-on: ubuntu-latest
+    name: Deploy Web App
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Build for production
+        run: npm run build
+        
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./
+          
+  # Desktop App Builds - your Tauri configuration
+  build-desktop:
+    needs: quality-check
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: 'aarch64-apple-darwin'
-            name: 'macOS-Apple-Silicon'
-            arch: 'arm64'
-          - target: 'x86_64-apple-darwin'
-            name: 'macOS-Intel'
-            arch: 'x64'
+          - platform: 'macos-latest'
+            args: '--target aarch64-apple-darwin'
+            name: 'macOS (Apple Silicon)'
+          - platform: 'macos-latest' 
+            args: '--target x86_64-apple-darwin'
+            name: 'macOS (Intel)'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            name: 'Linux'
+          - platform: 'windows-latest'
+            args: ''
+            name: 'Windows'
             
-    runs-on: macos-latest
-    name: 🍎 Build ${{ matrix.name }}
+    runs-on: ${{ matrix.platform }}
+    name: Build ${{ matrix.name }}
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Setup Node.js
@@ -84,136 +113,39 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           
-      - name: Setup Rust toolchain
+      - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+          
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
           
       - name: Install frontend dependencies
         run: npm ci
         
-      - name: Build and release macOS app
+      - name: Build desktop app
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Lexicon ${{ github.ref_name }} - ${{ matrix.name }}'
-          releaseBody: |
-            # 📚 Lexicon Desktop App ${{ github.ref_name }}
-            
-            **Universal RAG Dataset Preparation Tool for ${{ matrix.name }}**
-            
-            ## 🚀 Installation Instructions (macOS)
-            
-            1. **Download** the `.dmg` file below
-            2. **Mount** the disk image by double-clicking
-            3. **Drag** Lexicon.app to your Applications folder
-            4. **Important**: Right-click Lexicon.app → select "Open" to bypass Gatekeeper (unsigned app)
-            5. **Confirm** by clicking "Open" when prompted about developer verification
-            
-            ## ✨ Features in This Release
-            
-            - 🔄 **Offline-first desktop application** with service worker caching
-            - 📖 **Advanced book processing** with intelligent chunking strategies
-            - ♿ **Enterprise accessibility** with comprehensive WCAG compliance
-            - 🔒 **Production security** with session management and monitoring
-            - 🖼️ **Progressive image loading** with responsive optimization
-            - 📊 **Real-time performance monitoring** and quality analysis
-            
-            ## 💻 System Requirements
-            
-            - **macOS 10.15+** (Catalina or later)
-            - **4GB RAM** minimum, 8GB recommended
-            - **2GB free disk space** for application and processing
-            - **Architecture**: ${{ matrix.arch }} (${{ matrix.name }})
-            
-            ## 🆘 Troubleshooting
-            
-            If you see "App can't be opened" error:
-            1. Go to **System Preferences** → **Security & Privacy**
-            2. Click **"Open Anyway"** next to the Lexicon warning
-            3. Or use Terminal: `xattr -cr /Applications/Lexicon.app`
-          releaseDraft: false
+          tagName: v__VERSION__
+          releaseName: 'Lexicon v__VERSION__'
+          releaseBody: 'Universal RAG Dataset Preparation Tool'
+          releaseDraft: true
           prerelease: false
-          args: --target ${{ matrix.target }}
-
-  # Windows Desktop App Build
-  build-windows:
-    needs: quality-assurance
-    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
-    runs-on: windows-latest
-    name: 🖥️ Build Windows
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-          
-      - name: Install frontend dependencies
-        run: npm ci
-        
-      - name: Build and release Windows app
-        uses: tauri-apps/tauri-action@v0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tagName: ${{ github.ref_name }}
-          releaseName: 'Lexicon ${{ github.ref_name }} - Windows'
-          releaseBody: |
-            # 📚 Lexicon Desktop App ${{ github.ref_name }}
-            
-            **Universal RAG Dataset Preparation Tool for Windows**
-            
-            ## 🚀 Installation Instructions (Windows)
-            
-            1. **Download** the `.msi` installer below
-            2. **Run** the installer (may show "Unknown publisher" warning)
-            3. **Choose** "More info" → "Run anyway" if Windows Defender appears
-            4. **Follow** the installation wizard
-            5. **Launch** from Start Menu or Desktop shortcut
-            
-            ## ✨ Features in This Release
-            
-            - 🔄 **Offline-first desktop application** with service worker caching
-            - 📖 **Advanced book processing** with intelligent chunking strategies
-            - ♿ **Enterprise accessibility** with comprehensive WCAG compliance
-            - 🔒 **Production security** with session management and monitoring
-            - 🖼️ **Progressive image loading** with responsive optimization
-            - 📊 **Real-time performance monitoring** and quality analysis
-            
-            ## 💻 System Requirements
-            
-            - **Windows 10 1903+** or **Windows 11**
-            - **4GB RAM** minimum, 8GB recommended
-            - **2GB free disk space** for application and processing
-            - **x64 architecture** (64-bit)
-            
-            ## 🆘 Troubleshooting
-            
-            If Windows Defender blocks installation:
-            1. Click **"More info"** on the warning dialog
-            2. Click **"Run anyway"** to proceed with installation
-            3. Or temporarily disable Windows Defender during installation
-          releaseDraft: false
-          prerelease: false
+          args: ${{ matrix.args }}
 
   # Security & Performance Audits
   security-audit:
-    needs: quality-assurance
     runs-on: ubuntu-latest
-    name: 🔒 Security Audit
+    name: Security Audit
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Setup Node.js
@@ -225,21 +157,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Security audit (allow moderate issues)
-        run: npm audit --audit-level high || true
+      - name: Security audit
+        run: npm audit --audit-level moderate
         
-      - name: Check Tauri security configuration
-        run: npx @tauri-apps/cli info
-
-  # Component Documentation Deployment
-  deploy-docs:
-    needs: quality-assurance
+      - name: Dependency check
+        run: npx depcheck
+        
+  # Storybook deployment for component documentation
+  deploy-storybook:
+    needs: quality-check
     runs-on: ubuntu-latest
-    name: 📚 Deploy Documentation
+    name: Deploy Storybook
     if: github.ref == 'refs/heads/main'
     
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
         
       - name: Setup Node.js
@@ -251,12 +183,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
         
-      - name: Build Storybook documentation
+      - name: Build Storybook
         run: npm run build-storybook
         
-      - name: Deploy to GitHub Pages
+      - name: Deploy Storybook to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./storybook-static
-          destination_dir: docs
+          destination_dir: storybook

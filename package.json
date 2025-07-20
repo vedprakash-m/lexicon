@@ -1,7 +1,7 @@
 {
   "name": "lexicon",
   "private": true,
-  "version": "1.0.2",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -78,5 +78,10 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.4",
     "vitest": "^3.2.4"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:storybook/recommended"
+    ]
   }
 }

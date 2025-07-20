@@ -14,7 +14,7 @@ import {
   Badge, 
   Button 
 } from '../ui';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 
 // Enhanced keyboard shortcut definition
 export interface KeyboardShortcut {

@@ -34,9 +34,7 @@
     "active": true,
     "targets": [
       "dmg",
-      "app",
-      "msi",
-      "nsis"
+      "app"
     ],
     "icon": [
       "icons/32x32.png",
@@ -49,12 +47,7 @@
     "shortDescription": "Universal RAG Dataset Preparation Tool",
     "longDescription": "Transform any text content into high-quality RAG datasets for AI applications. Supports technical docs, academic papers, business documents, literature, and more with advanced processing and export capabilities.",
     "publisher": "Lexicon",
-    "copyright": "Copyright © 2025 Lexicon. All rights reserved.",
-    "windows": {
-      "certificateThumbprint": null,
-      "digestAlgorithm": "sha256",
-      "timestampUrl": ""
-    }
+    "copyright": "Copyright © 2025 Lexicon. All rights reserved."
   },
   "plugins": {
     "fs": {
@@ -62,11 +55,7 @@
         "$APPDATA",
         "$APPDATA/**",
         "$HOME/Documents/**",
-        "$HOME/Downloads/**",
-        "$LOCALDATA",
-        "$LOCALDATA/**",
-        "$DESKTOP",
-        "$DESKTOP/**"
+        "$HOME/Downloads/**"
       ]
     },
     "dialog": {
@@ -79,25 +68,6 @@
           "name": "python",
           "cmd": "python3",
           "args": true
-        },
-        {
-          "name": "python-win",
-          "cmd": "python",
-          "args": true
-        },
-        {
-          "name": "cmd",
-          "cmd": "cmd",
-          "args": [
-            "/C"
-          ]
-        },
-        {
-          "name": "powershell",
-          "cmd": "powershell",
-          "args": [
-            "-Command"
-          ]
         }
       ]
     },
@@ -106,6 +76,6 @@
     }
   },
   "package": {
-    "version": "1.0.2"
+    "version": "1.0.1"
   }
 }

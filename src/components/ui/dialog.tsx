@@ -8,7 +8,7 @@
 import React, { Fragment, useEffect } from 'react';
 import { Dialog as HeadlessDialog, Transition } from '@headlessui/react';
 import { X } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 import { Button } from './button';
 import { useFocusTrap, useReducedMotion } from '../../lib/accessibility';
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, act, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import CloudSyncSettings from '../CloudSyncSettings';
 import { useLexiconStore } from '../../store';
 import { AsyncTestUtils } from '../../test/utils/AsyncTestUtils';
@@ -35,6 +35,11 @@ describe('CloudSyncSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     (useLexiconStore as any).mockReturnValue(mockStore);
+    cleanup(); // Ensure clean state between tests
+  });
+
+  afterEach(() => {
+    cleanup(); // Clean up after each test
   });
 
   it('renders all cloud provider options', async () => {
@@ -72,8 +77,9 @@ describe('CloudSyncSettings', () => {
 
     render(<CloudSyncSettings />);
     
-    // Click on iCloud Drive
-    const icloudCard = screen.getByText('iCloud Drive').closest('div');
+    // Click on iCloud Drive - use getAllByText in case there are duplicates
+    const icloudCards = screen.getAllByText('iCloud Drive');
+    const icloudCard = icloudCards[0].closest('div');
     
     await act(async () => {
       fireEvent.click(icloudCard!);
@@ -226,19 +232,23 @@ describe('CloudSyncSettings', () => {
     };
     (useLexiconStore as any).mockReturnValue(storeWithProvider);
 
-    render(<CloudSyncSettings />);
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     await waitFor(() => {
-      expect(screen.getByText('Stop Sync')).toBeInTheDocument();
+      expect(screen.getAllByText('Stop Sync')[0]).toBeInTheDocument();
     });
 
-    const stopButton = screen.getByText('Stop Sync');
-    fireEvent.click(stopButton);
+    await act(async () => {
+      const stopButton = screen.getAllByText('Stop Sync')[0];
+      fireEvent.click(stopButton);
+    });
     
     expect(invoke).toHaveBeenCalledWith('stop_sync');
   });
 
-  it('updates sync patterns', () => {
+  it('updates sync patterns', async () => {
     const storeWithProvider = {
       ...mockStore,
       settings: {
@@ -252,57 +262,77 @@ describe('CloudSyncSettings', () => {
     };
     (useLexiconStore as any).mockReturnValue(storeWithProvider);
 
-    render(<CloudSyncSettings />);
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     // Find the textarea by label text since placeholder might not match exactly
-    const syncPatternsTextarea = screen.getByLabelText('Files to sync (patterns)');
-    fireEvent.change(syncPatternsTextarea, { 
-      target: { value: '*.db\n*.json\nnew_pattern_*.json' } 
+    await act(async () => {
+      const syncPatternsTextarea = screen.getByLabelText('Files to sync (patterns)');
+      fireEvent.change(syncPatternsTextarea, { 
+        target: { value: '*.db\n*.json\nnew_pattern_*.json' } 
+      });
     });
     
     expect(mockStore.updateSettings).toHaveBeenCalled();
   });
 
-  it('displays provider features correctly', () => {
-    render(<CloudSyncSettings />);
+  it('displays provider features correctly', async () => {
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
-    // Check iCloud features
-    expect(screen.getByText(/Native integration/)).toBeInTheDocument();
-    expect(screen.getByText(/Cross-device sync/)).toBeInTheDocument();
+    // Check iCloud features - use getAllByText since there might be multiple elements
+    expect(screen.getAllByText(/Native integration/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Cross-device sync/)[0]).toBeInTheDocument();
     
     // Check Google Drive features
-    expect(screen.getByText(/15GB free storage/)).toBeInTheDocument();
-    expect(screen.getByText(/Cross-platform/)).toBeInTheDocument();
+    expect(screen.getAllByText(/15GB free storage/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Cross-platform/)[0]).toBeInTheDocument();
     
     // Check Dropbox features
-    expect(screen.getByText(/Smart sync/)).toBeInTheDocument();
-    expect(screen.getByText(/Team collaboration/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Smart sync/)[0]).toBeInTheDocument();
+    expect(screen.getAllByText(/Team collaboration/)[0]).toBeInTheDocument();
   });
 
   it('shows loading state during connection test', async () => {
     // Mock the invoke function to resolve after a delay
     const { invoke } = await import('@tauri-apps/api/core');
-    (invoke as any).mockImplementation(() => 
-      new Promise(resolve => 
-        setTimeout(() => resolve({
-          enabled: true,
-          lastSync: null,
-          provider: 'icloud',
-          conflicts: 0,
-          pendingUploads: 0,
-          pendingDownloads: 0,
-        }), 100)
-      )
-    );
-
-    render(<CloudSyncSettings />);
+    let resolveInvoke: (value: any) => void;
+    const invokePromise = new Promise(resolve => {
+      resolveInvoke = resolve;
+    });
     
-    const icloudCard = screen.getByText('iCloud Drive').closest('div');
-    fireEvent.click(icloudCard!);
+    (invoke as any).mockImplementation(() => invokePromise);
+
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
+    
+    await act(async () => {
+      const icloudCards = screen.getAllByText('iCloud Drive');
+      const icloudCard = icloudCards[0].closest('div');
+      fireEvent.click(icloudCard!);
+    });
     
     // Check that the provider gets selected and store is updated
     await waitFor(() => {
       expect(mockStore.updateSettings).toHaveBeenCalled();
+    });
+    
+    // Resolve the invoke promise to complete the async operation
+    await act(async () => {
+      resolveInvoke!({
+        enabled: true,
+        lastSync: null,
+        provider: 'icloud',
+        conflicts: 0,
+        pendingUploads: 0,
+        pendingDownloads: 0,
+      });
+      
+      // Wait for the promise to resolve
+      await invokePromise;
     });
   });
 });

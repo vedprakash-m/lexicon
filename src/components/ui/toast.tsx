@@ -7,7 +7,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { Transition } from '@headlessui/react';
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '@/lib/utils';
 import { Button } from './button';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
