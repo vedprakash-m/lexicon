@@ -88,17 +88,24 @@
         {
           "name": "cmd",
           "cmd": "cmd",
-          "args": ["/C"]
+          "args": [
+            "/C"
+          ]
         },
         {
           "name": "powershell",
           "cmd": "powershell",
-          "args": ["-Command"]
+          "args": [
+            "-Command"
+          ]
         }
       ]
     },
     "notification": {
       "all": true
     }
+  },
+  "package": {
+    "version": "1.0.2"
   }
 }
