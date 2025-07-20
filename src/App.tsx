@@ -1,4 +1,5 @@
 import { HashRouter as Router, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
 import { 
   ThemeProvider, 
   ToastProvider, 
@@ -21,11 +22,19 @@ import IntegratedCatalogInterface from './components/catalog/IntegratedCatalogIn
 import { SimpleSyncBackupManager } from './components/sync/SimpleSyncBackupManager';
 import { PerformanceDashboard } from './components/performance/PerformanceDashboard';
 import { OnboardingProvider, OnboardingManager } from './components/onboarding';
+import { useLexiconStore } from './store';
 // import { CacheManager } from './components/cache';
 import './App.css';
 
 function App() {
   console.log('App.tsx: Rendering full Lexicon App');
+  
+  const { loadSettings } = useLexiconStore();
+
+  // Load settings from backend on app startup
+  useEffect(() => {
+    loadSettings().catch(console.error);
+  }, [loadSettings]);
   
   try {
     return (

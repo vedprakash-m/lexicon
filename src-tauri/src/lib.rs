@@ -18,15 +18,17 @@ mod performance_commands;
 mod cache_manager;
 mod cache_commands;
 mod batch_commands;
+mod schema_version;
+mod migration;
+mod backup_manager;
 mod export_commands;
 mod visual_asset_commands;
 mod security_manager;
 mod security_commands;
 mod selector_commands;
+mod notification_commands;
 pub mod models;
 pub mod validation;
-pub mod schema;
-pub mod migration;
 
 #[cfg(test)]
 mod tests;
@@ -74,7 +76,8 @@ use web_scraper::WebScraperManager;
 use web_scraper_commands::{
     WebScraperState,
     init_web_scraper, start_scraping_job, get_scraping_job_status,
-    get_active_scraping_jobs, cancel_scraping_job, scrape_single_url,
+    get_active_scraping_jobs, cancel_scraping_job, pause_scraping_job, resume_scraping_job,
+    start_existing_scraping_job, scrape_single_url,
     cleanup_scraping_jobs, get_scraping_progress, get_default_scraping_config,
     validate_urls, test_scraper_connectivity
 };
@@ -85,7 +88,8 @@ use processing_commands::{
 use catalog_commands::{
     CatalogManager,
     get_all_books, search_catalog, get_book_by_id, enrich_book_metadata,
-    export_catalog, get_related_books, get_catalog_stats, generate_catalog_report
+    export_catalog, get_related_books, get_catalog_stats, generate_catalog_report,
+    check_for_duplicates, delete_book
 };
 use sync_commands::{
     SyncState,
@@ -137,7 +141,13 @@ use security_commands::{
 };
 use selector_commands::{
     ScrapingState,
-    validate_selector_urls, scrape_url_for_selector_testing, test_css_selector, validate_extraction_rule
+    validate_selector_urls, scrape_url_for_selector_testing, test_css_selector, validate_extraction_rule,
+    test_css_selector_enhanced
+};
+use notification_commands::{
+    NotificationManagerState, NotificationManager,
+    get_notifications, mark_notification_as_read, mark_all_notifications_as_read,
+    delete_notification, add_notification, get_unread_notification_count
 };
 use tokio::sync::Mutex;
 use std::path::PathBuf;
@@ -177,6 +187,9 @@ pub async fn run() {
   let performance_monitor = Arc::new(PerformanceMonitor::new());
   let background_task_system = Arc::new(BackgroundTaskSystem::new(4, performance_monitor.clone()));
   
+  // Start performance monitoring
+  performance_monitor.start_monitoring().await;
+  
   // Initialize cache manager
   let cache_config = CacheConfig {
     cache_directory: app_data_dir.join("cache"),
@@ -207,6 +220,10 @@ pub async fn run() {
   let export_manager = ExportManager::new();
   let export_manager_state = Arc::new(tokio::sync::Mutex::new(export_manager));
   
+  // Initialize notification manager
+  let notification_manager = NotificationManager::default();
+  let notification_manager_state: NotificationManagerState = Arc::new(Mutex::new(notification_manager));
+  
   // Initialize scraping state for selector testing
   let scraping_state = ScrapingState::default();
   
@@ -226,6 +243,7 @@ pub async fn run() {
     .manage(security_state)
     .manage(export_manager_state)
     .manage(scraping_state)
+    .manage(notification_manager_state)
     .invoke_handler(tauri::generate_handler![
       // Python Manager commands
       discover_python_environment,
@@ -300,6 +318,8 @@ pub async fn run() {
       get_scraping_job_status,
       get_active_scraping_jobs,
       cancel_scraping_job,
+      pause_scraping_job,
+      resume_scraping_job,
       scrape_single_url,
       cleanup_scraping_jobs,
       get_scraping_progress,
@@ -320,6 +340,8 @@ pub async fn run() {
       get_related_books,
       get_catalog_stats,
       generate_catalog_report,
+      check_for_duplicates,
+      delete_book,
       // Book Upload commands
       upload_book_from_file,
       upload_multiple_books,
@@ -401,7 +423,8 @@ pub async fn run() {
       validate_selector_urls,
       scrape_url_for_selector_testing,
       test_css_selector,
-      validate_extraction_rule
+      validate_extraction_rule,
+      test_css_selector_enhanced
     ])
     .setup(|app| {
       if cfg!(debug_assertions) {

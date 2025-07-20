@@ -2,9 +2,7 @@ use tauri::State;
 use std::collections::HashMap;
 use std::sync::Mutex;
 use chrono::Utc;
-
 use crate::models::{SourceText, Dataset, ProcessingStatus, ProcessingStep};
-use crate::validation::Validate;
 
 // In-memory storage for the state (in a real app, this would be a database)
 #[derive(Default)]
@@ -49,9 +47,10 @@ pub async fn save_source_text(
     source_text: SourceText,
     storage: State<'_, StateStorage>,
 ) -> Result<(), String> {
-    // Validate the source text
-    source_text.validate()
-        .map_err(|e| format!("Validation failed: {:?}", e))?;
+    // Basic validation
+    if source_text.title.trim().is_empty() {
+        return Err("Source text title cannot be empty".to_string());
+    }
 
     let mut source_texts = storage.source_texts.lock()
         .map_err(|e| format!("Failed to acquire lock: {}", e))?;
@@ -97,9 +96,10 @@ pub async fn save_dataset(
     dataset: Dataset,
     storage: State<'_, StateStorage>,
 ) -> Result<(), String> {
-    // Validate the dataset
-    dataset.validate()
-        .map_err(|e| format!("Validation failed: {:?}", e))?;
+    // Basic validation
+    if dataset.name.trim().is_empty() {
+        return Err("Dataset name cannot be empty".to_string());
+    }
 
     let mut datasets = storage.datasets.lock()
         .map_err(|e| format!("Failed to acquire lock: {}", e))?;

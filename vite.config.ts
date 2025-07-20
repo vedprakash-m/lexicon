@@ -14,6 +14,35 @@ export default defineConfig(async () => ({
       "@": resolve(__dirname, "./src"),
     },
   },
+  
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor chunks
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'ui-vendor': ['@headlessui/react', '@heroicons/react'],
+          // Feature chunks
+          'catalog': [
+            './src/components/catalog/EnhancedCatalogInterface.tsx',
+            './src/components/catalog/IntegratedCatalogInterface.tsx',
+          ],
+          'processing': [
+            './src/components/batch/BatchProcessing.tsx',
+            './src/components/chunking/AdvancedChunking.tsx',
+          ],
+        },
+      },
+    },
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+      },
+    },
+  },
+  
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors

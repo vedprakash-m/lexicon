@@ -1,650 +1,379 @@
-"""
-Metadata Enrichment Engine for Lexicon.
-
-This module provides comprehensive book metadata enrichment capabilities using
-external APIs like Google Books, OpenLibrary, and custom enrichment sources.
-"""
-
-import asyncio
-import aiohttp
-import json
-import logging
-import re
+import requests
 import time
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Tuple
-from urllib.parse import quote
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-class MetadataSource(Enum):
-    """Available metadata sources."""
-    GOOGLE_BOOKS = "google_books"
-    OPENLIBRARY = "openlibrary"
-    WORLDCAT = "worldcat"
-    GOODREADS = "goodreads"
-    MANUAL = "manual"
-
-
-class EnrichmentStatus(Enum):
-    """Status of metadata enrichment."""
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    PARTIAL = "partial"
-
+import logging
+from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
+import json
+import hashlib
 
 @dataclass
-class BookIdentifier:
-    """Book identification information."""
-    isbn_10: Optional[str] = None
-    isbn_13: Optional[str] = None
-    title: Optional[str] = None
-    author: Optional[str] = None
-    google_books_id: Optional[str] = None
-    openlibrary_id: Optional[str] = None
-    worldcat_oclc: Optional[str] = None
-    
-    def get_search_terms(self) -> List[str]:
-        """Get search terms for metadata lookup."""
-        terms = []
-        if self.isbn_13:
-            terms.append(f"isbn:{self.isbn_13}")
-        if self.isbn_10:
-            terms.append(f"isbn:{self.isbn_10}")
-        if self.title and self.author:
-            terms.append(f'intitle:"{self.title}" inauthor:"{self.author}"')
-        elif self.title:
-            terms.append(f'intitle:"{self.title}"')
-        return terms
-
-
-@dataclass
-class AuthorInfo:
-    """Author information."""
-    name: str
-    birth_year: Optional[int] = None
-    death_year: Optional[int] = None
-    biography: Optional[str] = None
-    photo_url: Optional[str] = None
-    wikipedia_url: Optional[str] = None
-    website_url: Optional[str] = None
-    nationality: Optional[str] = None
-    other_works: List[str] = None
-    
-    def __post_init__(self):
-        if self.other_works is None:
-            self.other_works = []
-    
-    def __hash__(self):
-        return hash(self.name)
-    
-    def __eq__(self, other):
-        if not isinstance(other, AuthorInfo):
-            return False
-        return self.name == other.name
-
-
-@dataclass
-class PublisherInfo:
-    """Publisher information."""
-    name: str
-    founded_year: Optional[int] = None
-    location: Optional[str] = None
-    website_url: Optional[str] = None
-    logo_url: Optional[str] = None
-    description: Optional[str] = None
-
-
-@dataclass
-class EnrichedMetadata:
-    """Enriched book metadata."""
-    # Basic identification
+class BookMetadata:
     title: str
-    subtitle: Optional[str] = None
-    authors: List[AuthorInfo] = None
-    publisher: Optional[PublisherInfo] = None
-    published_date: Optional[str] = None
-    
-    # Classification
-    categories: List[str] = None
-    subjects: List[str] = None
-    genre: Optional[str] = None
-    language: Optional[str] = None
-    country_of_publication: Optional[str] = None
-    
-    # Physical properties
-    page_count: Optional[int] = None
-    dimensions: Optional[Dict[str, float]] = None  # width, height, thickness in cm
-    weight_grams: Optional[float] = None
-    format: Optional[str] = None  # hardcover, paperback, ebook, etc.
-    
-    # Content description
-    description: Optional[str] = None
-    summary: Optional[str] = None
-    table_of_contents: List[str] = None
-    
-    # Ratings and reviews
-    average_rating: Optional[float] = None
-    ratings_count: Optional[int] = None
-    review_count: Optional[int] = None
-    
-    # Visual assets
-    cover_image_url: Optional[str] = None
-    cover_image_thumbnail_url: Optional[str] = None
-    cover_image_small_url: Optional[str] = None
-    
-    # Related works
-    series: Optional[str] = None
-    series_number: Optional[int] = None
-    related_books: List[str] = None
-    translations: List[Dict[str, str]] = None
-    editions: List[Dict[str, str]] = None
-    
-    # Technical metadata
-    isbn_10: Optional[str] = None
-    isbn_13: Optional[str] = None
-    oclc_number: Optional[str] = None
-    lccn: Optional[str] = None
-    dewey_decimal: Optional[str] = None
-    lc_classification: Optional[str] = None
-    
-    # Enrichment tracking
-    enrichment_sources: List[MetadataSource] = None
-    enrichment_timestamp: Optional[datetime] = None
-    enrichment_quality_score: Optional[float] = None
-    enrichment_status: EnrichmentStatus = EnrichmentStatus.PENDING
-    
-    def __post_init__(self):
-        """Initialize lists if None."""
-        if self.authors is None:
-            self.authors = []
-        if self.categories is None:
-            self.categories = []
-        if self.subjects is None:
-            self.subjects = []
-        if self.table_of_contents is None:
-            self.table_of_contents = []
-        if self.related_books is None:
-            self.related_books = []
-        if self.translations is None:
-            self.translations = []
-        if self.editions is None:
-            self.editions = []
-        if self.enrichment_sources is None:
-            self.enrichment_sources = []
+    authors: List[str]
+    isbn: Optional[str]
+    publisher: Optional[str]
+    published_date: Optional[str]
+    description: Optional[str]
+    categories: List[str]
+    language: str
+    page_count: Optional[int]
+    cover_url: Optional[str]
+    rating: Optional[float]
+    ratings_count: Optional[int]
+    source: str
+    confidence: float
 
-
-class GoogleBooksEnricher:
-    """Google Books API enrichment provider."""
-    
-    def __init__(self, api_key: Optional[str] = None, rate_limit: float = 1.0):
-        self.api_key = api_key
-        self.rate_limit = rate_limit
-        self.last_request_time = 0
-        self.base_url = "https://www.googleapis.com/books/v1/volumes"
-    
-    async def _rate_limit(self):
-        """Enforce rate limiting."""
-        time_since_last = time.time() - self.last_request_time
-        if time_since_last < self.rate_limit:
-            await asyncio.sleep(self.rate_limit - time_since_last)
-        self.last_request_time = time.time()
-    
-    async def search_book(self, identifier: BookIdentifier) -> List[Dict[str, Any]]:
-        """Search for book using Google Books API."""
-        await self._rate_limit()
-        
-        search_terms = identifier.get_search_terms()
-        if not search_terms:
-            return []
-        
-        async with aiohttp.ClientSession() as session:
-            for term in search_terms:
-                try:
-                    params = {
-                        'q': term,
-                        'maxResults': 5
-                    }
-                    if self.api_key:
-                        params['key'] = self.api_key
-                    
-                    async with session.get(self.base_url, params=params) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            if data.get('items'):
-                                return data['items']
-                except Exception as e:
-                    logger.warning(f"Google Books search failed for '{term}': {str(e)}")
-                    continue
-        
-        return []
-    
-    def _extract_metadata(self, volume_info: Dict[str, Any]) -> EnrichedMetadata:
-        """Extract metadata from Google Books volume info."""
-        metadata = EnrichedMetadata(
-            title=volume_info.get('title', ''),
-            subtitle=volume_info.get('subtitle'),
-            description=volume_info.get('description'),
-            published_date=volume_info.get('publishedDate'),
-            page_count=volume_info.get('pageCount'),
-            language=volume_info.get('language'),
-            average_rating=volume_info.get('averageRating'),
-            ratings_count=volume_info.get('ratingsCount'),
-            enrichment_sources=[MetadataSource.GOOGLE_BOOKS],
-            enrichment_timestamp=datetime.now()
-        )
-        
-        # Authors
-        if 'authors' in volume_info:
-            metadata.authors = [
-                AuthorInfo(name=author) for author in volume_info['authors']
-            ]
-        
-        # Publisher
-        if 'publisher' in volume_info:
-            metadata.publisher = PublisherInfo(name=volume_info['publisher'])
-        
-        # Categories
-        if 'categories' in volume_info:
-            metadata.categories = volume_info['categories']
-        
-        # Industry identifiers (ISBN)
-        if 'industryIdentifiers' in volume_info:
-            for identifier in volume_info['industryIdentifiers']:
-                if identifier['type'] == 'ISBN_10':
-                    metadata.isbn_10 = identifier['identifier']
-                elif identifier['type'] == 'ISBN_13':
-                    metadata.isbn_13 = identifier['identifier']
-        
-        # Images
-        if 'imageLinks' in volume_info:
-            image_links = volume_info['imageLinks']
-            metadata.cover_image_thumbnail_url = image_links.get('thumbnail')
-            metadata.cover_image_small_url = image_links.get('small')
-            # Try to get higher resolution image
-            if 'thumbnail' in image_links:
-                metadata.cover_image_url = image_links['thumbnail'].replace('&zoom=1', '&zoom=0')
-        
-        return metadata
-    
-    async def enrich(self, identifier: BookIdentifier) -> Optional[EnrichedMetadata]:
-        """Enrich book metadata using Google Books."""
-        try:
-            volumes = await self.search_book(identifier)
-            if volumes:
-                # Take the first (best) match
-                volume = volumes[0]
-                if 'volumeInfo' in volume:
-                    return self._extract_metadata(volume['volumeInfo'])
-        except Exception as e:
-            logger.error(f"Google Books enrichment failed: {str(e)}")
-        
-        return None
-
-
-class OpenLibraryEnricher:
-    """OpenLibrary API enrichment provider."""
-    
-    def __init__(self, rate_limit: float = 1.0):
-        self.rate_limit = rate_limit
-        self.last_request_time = 0
-        self.base_url = "https://openlibrary.org"
-    
-    async def _rate_limit(self):
-        """Enforce rate limiting."""
-        time_since_last = time.time() - self.last_request_time
-        if time_since_last < self.rate_limit:
-            await asyncio.sleep(self.rate_limit - time_since_last)
-        self.last_request_time = time.time()
-    
-    async def search_book(self, identifier: BookIdentifier) -> List[Dict[str, Any]]:
-        """Search for book using OpenLibrary API."""
-        await self._rate_limit()
-        
-        async with aiohttp.ClientSession() as session:
-            # Try ISBN search first
-            if identifier.isbn_13 or identifier.isbn_10:
-                isbn = identifier.isbn_13 or identifier.isbn_10
-                try:
-                    url = f"{self.base_url}/isbn/{isbn}.json"
-                    async with session.get(url) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            return [data]
-                except Exception as e:
-                    logger.warning(f"OpenLibrary ISBN search failed: {str(e)}")
-            
-            # Fallback to general search
-            if identifier.title:
-                try:
-                    params = {
-                        'title': identifier.title,
-                        'limit': 5
-                    }
-                    if identifier.author:
-                        params['author'] = identifier.author
-                    
-                    url = f"{self.base_url}/search.json"
-                    async with session.get(url, params=params) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            if data.get('docs'):
-                                return data['docs']
-                except Exception as e:
-                    logger.warning(f"OpenLibrary search failed: {str(e)}")
-        
-        return []
-    
-    def _extract_metadata(self, book_data: Dict[str, Any]) -> EnrichedMetadata:
-        """Extract metadata from OpenLibrary book data."""
-        metadata = EnrichedMetadata(
-            title=book_data.get('title', ''),
-            subtitle=book_data.get('subtitle'),
-            published_date=str(book_data.get('publish_date', '')),
-            page_count=book_data.get('number_of_pages'),
-            enrichment_sources=[MetadataSource.OPENLIBRARY],
-            enrichment_timestamp=datetime.now()
-        )
-        
-        # Authors
-        if 'authors' in book_data:
-            author_names = []
-            for author in book_data['authors']:
-                if isinstance(author, dict) and 'name' in author:
-                    author_names.append(author['name'])
-                elif isinstance(author, str):
-                    author_names.append(author)
-            metadata.authors = [AuthorInfo(name=name) for name in author_names]
-        elif 'author_name' in book_data:
-            metadata.authors = [AuthorInfo(name=name) for name in book_data['author_name']]
-        
-        # Publisher
-        if 'publishers' in book_data and book_data['publishers']:
-            metadata.publisher = PublisherInfo(name=book_data['publishers'][0])
-        elif 'publisher' in book_data:
-            metadata.publisher = PublisherInfo(name=book_data['publisher'])
-        
-        # Subjects/Categories
-        if 'subjects' in book_data:
-            metadata.subjects = book_data['subjects'][:10]  # Limit to avoid too many
-        
-        # ISBN
-        if 'isbn_13' in book_data and book_data['isbn_13']:
-            metadata.isbn_13 = book_data['isbn_13'][0]
-        if 'isbn_10' in book_data and book_data['isbn_10']:
-            metadata.isbn_10 = book_data['isbn_10'][0]
-        
-        # Cover image
-        if 'cover_i' in book_data:
-            cover_id = book_data['cover_i']
-            metadata.cover_image_thumbnail_url = f"https://covers.openlibrary.org/b/id/{cover_id}-S.jpg"
-            metadata.cover_image_small_url = f"https://covers.openlibrary.org/b/id/{cover_id}-M.jpg"
-            metadata.cover_image_url = f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
-        
-        return metadata
-    
-    async def enrich(self, identifier: BookIdentifier) -> Optional[EnrichedMetadata]:
-        """Enrich book metadata using OpenLibrary."""
-        try:
-            books = await self.search_book(identifier)
-            if books:
-                return self._extract_metadata(books[0])
-        except Exception as e:
-            logger.error(f"OpenLibrary enrichment failed: {str(e)}")
-        
-        return None
-
-
-class MetadataEnrichmentEngine:
-    """Main metadata enrichment engine that coordinates multiple sources."""
-    
+class MetadataEnricher:
     def __init__(self, google_books_api_key: Optional[str] = None):
-        self.enrichers = {
-            MetadataSource.GOOGLE_BOOKS: GoogleBooksEnricher(api_key=google_books_api_key),
-            MetadataSource.OPENLIBRARY: OpenLibraryEnricher()
-        }
+        self.google_books_api_key = google_books_api_key
+        self.logger = logging.getLogger(__name__)
+        self.rate_limit_delay = 1.0  # seconds between API calls
+        self.last_request_time = 0
+        
+        # Cache for API responses
         self.cache = {}
-        self.cache_ttl = 24 * 60 * 60  # 24 hours
-    
-    def _generate_cache_key(self, identifier: BookIdentifier) -> str:
-        """Generate cache key for book identifier."""
-        parts = []
-        if identifier.isbn_13:
-            parts.append(f"isbn13:{identifier.isbn_13}")
-        elif identifier.isbn_10:
-            parts.append(f"isbn10:{identifier.isbn_10}")
-        elif identifier.title and identifier.author:
-            parts.append(f"title:{identifier.title[:50]}:author:{identifier.author[:30]}")
-        elif identifier.title:
-            parts.append(f"title:{identifier.title[:50]}")
-        return "|".join(parts)
-    
-    def _is_cache_valid(self, cache_entry: Dict[str, Any]) -> bool:
-        """Check if cache entry is still valid."""
-        if 'timestamp' not in cache_entry:
-            return False
-        return (time.time() - cache_entry['timestamp']) < self.cache_ttl
-    
-    def _merge_metadata(self, *metadata_list: EnrichedMetadata) -> EnrichedMetadata:
-        """Merge metadata from multiple sources, preferring non-empty values."""
-        if not metadata_list:
-            return EnrichedMetadata(title="")
         
-        # Start with first metadata as base
-        result = EnrichedMetadata(title="")
-        for field_name in result.__dataclass_fields__:
-            values = []
-            for metadata in metadata_list:
-                value = getattr(metadata, field_name, None)
-                if value is not None and value != "" and value != []:
-                    values.append(value)
-            
-            if values:
-                # For lists, merge them
-                if isinstance(values[0], list):
-                    merged_list = []
-                    for value_list in values:
-                        merged_list.extend(value_list)
-                    # Remove duplicates while preserving order
-                    setattr(result, field_name, list(dict.fromkeys(merged_list)))
-                # For other types, take first non-empty value
-                else:
-                    setattr(result, field_name, values[0])
-        
-        # Merge enrichment sources
-        all_sources = []
-        for metadata in metadata_list:
-            if metadata.enrichment_sources:
-                all_sources.extend(metadata.enrichment_sources)
-        result.enrichment_sources = list(set(all_sources))
-        result.enrichment_timestamp = datetime.now()
-        
-        # Calculate quality score based on completeness
-        result.enrichment_quality_score = self._calculate_quality_score(result)
-        result.enrichment_status = EnrichmentStatus.COMPLETED
-        
-        return result
-    
-    def _calculate_quality_score(self, metadata: EnrichedMetadata) -> float:
-        """Calculate quality score based on metadata completeness."""
-        score = 0.0
-        max_score = 0.0
-        
-        # Essential fields (higher weight)
-        essential_fields = [
-            ('title', 10),
-            ('authors', 8),
-            ('publisher', 6),
-            ('published_date', 6),
-            ('description', 8)
-        ]
-        
-        # Important fields (medium weight)
-        important_fields = [
-            ('categories', 4),
-            ('isbn_13', 4),
-            ('page_count', 3),
-            ('cover_image_url', 5),
-            ('language', 2)
-        ]
-        
-        # Nice-to-have fields (lower weight)
-        optional_fields = [
-            ('subtitle', 2),
-            ('subjects', 3),
-            ('average_rating', 2),
-            ('table_of_contents', 3),
-            ('series', 2)
-        ]
-        
-        all_fields = essential_fields + important_fields + optional_fields
-        
-        for field_name, weight in all_fields:
-            max_score += weight
-            value = getattr(metadata, field_name, None)
-            if value is not None and value != "" and value != []:
-                score += weight
-        
-        return min(1.0, score / max_score) if max_score > 0 else 0.0
-    
-    async def enrich_book(self, identifier: BookIdentifier, sources: Optional[List[MetadataSource]] = None) -> EnrichedMetadata:
-        """Enrich book metadata using specified sources."""
-        if sources is None:
-            sources = [MetadataSource.GOOGLE_BOOKS, MetadataSource.OPENLIBRARY]
-        
-        # Check cache first
-        cache_key = self._generate_cache_key(identifier)
-        if cache_key in self.cache and self._is_cache_valid(self.cache[cache_key]):
-            logger.info(f"Using cached metadata for: {cache_key}")
-            return EnrichedMetadata(**self.cache[cache_key]['metadata'])
-        
-        # Gather metadata from all requested sources
-        metadata_results = []
-        
-        for source in sources:
-            if source in self.enrichers:
-                try:
-                    logger.info(f"Enriching from {source.value}")
-                    enricher = self.enrichers[source]
-                    metadata = await enricher.enrich(identifier)
-                    if metadata:
-                        metadata_results.append(metadata)
-                        logger.info(f"Successfully enriched from {source.value}")
-                    else:
-                        logger.warning(f"No metadata found from {source.value}")
-                except Exception as e:
-                    logger.error(f"Enrichment from {source.value} failed: {str(e)}")
-        
-        # Merge results
-        if metadata_results:
-            merged_metadata = self._merge_metadata(*metadata_results)
-            
-            # Cache the result
-            self.cache[cache_key] = {
-                'metadata': asdict(merged_metadata),
-                'timestamp': time.time()
-            }
-            
-            logger.info(f"Enrichment completed with quality score: {merged_metadata.enrichment_quality_score:.2f}")
-            return merged_metadata
-        
-        # Return minimal metadata if no enrichment succeeded
-        logger.warning("No metadata could be enriched")
-        return EnrichedMetadata(
-            title=identifier.title or "Unknown Title",
-            enrichment_status=EnrichmentStatus.FAILED,
-            enrichment_timestamp=datetime.now(),
-            enrichment_quality_score=0.0
-        )
-    
-    async def batch_enrich(self, identifiers: List[BookIdentifier], 
-                          sources: Optional[List[MetadataSource]] = None,
-                          batch_size: int = 5) -> List[EnrichedMetadata]:
-        """Enrich multiple books in batches."""
+    def enrich_metadata(self, title: str, author: Optional[str] = None, isbn: Optional[str] = None) -> List[BookMetadata]:
+        """Enrich metadata using multiple sources"""
         results = []
         
-        for i in range(0, len(identifiers), batch_size):
-            batch = identifiers[i:i + batch_size]
-            logger.info(f"Processing batch {i//batch_size + 1} ({len(batch)} books)")
+        # Try Google Books API first
+        if self.google_books_api_key:
+            google_results = self._search_google_books(title, author, isbn)
+            results.extend(google_results)
             
-            # Process batch concurrently
-            tasks = [self.enrich_book(identifier, sources) for identifier in batch]
-            batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-            
-            for result in batch_results:
-                if isinstance(result, Exception):
-                    logger.error(f"Batch enrichment error: {str(result)}")
-                    results.append(EnrichedMetadata(
-                        title="Error",
-                        enrichment_status=EnrichmentStatus.FAILED,
-                        enrichment_timestamp=datetime.now()
-                    ))
-                else:
-                    results.append(result)
-            
-            # Small delay between batches to be respectful to APIs
-            if i + batch_size < len(identifiers):
-                await asyncio.sleep(2)
+        # Try OpenLibrary API
+        openlibrary_results = self._search_openlibrary(title, author, isbn)
+        results.extend(openlibrary_results)
         
-        return results
-    
-    def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics."""
-        total_entries = len(self.cache)
-        valid_entries = sum(1 for entry in self.cache.values() if self._is_cache_valid(entry))
+        # Deduplicate and rank results
+        deduplicated = self._deduplicate_results(results)
+        ranked = self._rank_results(deduplicated, title, author)
         
-        return {
-            'total_entries': total_entries,
-            'valid_entries': valid_entries,
-            'expired_entries': total_entries - valid_entries,
-            'cache_hit_rate': valid_entries / total_entries if total_entries > 0 else 0.0
+        return ranked[:5]  # Return top 5 results
+        
+    def _search_google_books(self, title: str, author: Optional[str] = None, isbn: Optional[str] = None) -> List[BookMetadata]:
+        """Search Google Books API"""
+        self._respect_rate_limit()
+        
+        # Build search query
+        query_parts = []
+        if isbn:
+            query_parts.append(f"isbn:{isbn}")
+        else:
+            query_parts.append(f'intitle:"{title}"')
+            if author:
+                query_parts.append(f'inauthor:"{author}"')
+                
+        query = "+".join(query_parts)
+        
+        # Check cache
+        cache_key = hashlib.md5(f"google_books_{query}".encode()).hexdigest()
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+            
+        url = "https://www.googleapis.com/books/v1/volumes"
+        params = {
+            'q': query,
+            'maxResults': 10,
+            'key': self.google_books_api_key
         }
-    
-    def clear_cache(self):
-        """Clear all cached metadata."""
-        self.cache.clear()
-        logger.info("Metadata cache cleared")
-
-
-# Utility functions for common use cases
-async def enrich_book_metadata(title: str, author: Optional[str] = None, 
-                             isbn: Optional[str] = None,
-                             google_books_api_key: Optional[str] = None) -> EnrichedMetadata:
-    """Convenience function to enrich a single book."""
-    identifier = BookIdentifier(
-        title=title,
-        author=author,
-        isbn_13=isbn if isbn and len(isbn) == 13 else None,
-        isbn_10=isbn if isbn and len(isbn) == 10 else None
-    )
-    
-    engine = MetadataEnrichmentEngine(google_books_api_key=google_books_api_key)
-    return await engine.enrich_book(identifier)
-
-
-async def batch_enrich_from_csv(csv_path: str, 
-                               google_books_api_key: Optional[str] = None) -> List[EnrichedMetadata]:
-    """Enrich books from a CSV file with columns: title, author, isbn."""
-    import csv
-    
-    identifiers = []
-    with open(csv_path, 'r', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            identifier = BookIdentifier(
-                title=row.get('title'),
-                author=row.get('author'),
-                isbn_13=row.get('isbn') if row.get('isbn') and len(row.get('isbn', '')) == 13 else None,
-                isbn_10=row.get('isbn') if row.get('isbn') and len(row.get('isbn', '')) == 10 else None
+        
+        try:
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            results = []
+            for item in data.get('items', []):
+                volume_info = item.get('volumeInfo', {})
+                
+                # Extract metadata
+                metadata = BookMetadata(
+                    title=volume_info.get('title', ''),
+                    authors=volume_info.get('authors', []),
+                    isbn=self._extract_isbn(volume_info.get('industryIdentifiers', [])),
+                    publisher=volume_info.get('publisher'),
+                    published_date=volume_info.get('publishedDate'),
+                    description=volume_info.get('description'),
+                    categories=volume_info.get('categories', []),
+                    language=volume_info.get('language', 'en'),
+                    page_count=volume_info.get('pageCount'),
+                    cover_url=self._extract_cover_url(volume_info.get('imageLinks', {})),
+                    rating=volume_info.get('averageRating'),
+                    ratings_count=volume_info.get('ratingsCount'),
+                    source='google_books',
+                    confidence=self._calculate_confidence(volume_info, title, author)
+                )
+                
+                results.append(metadata)
+                
+            # Cache results
+            self.cache[cache_key] = results
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Google Books API error: {e}")
+            return []
+            
+    def _search_openlibrary(self, title: str, author: Optional[str] = None, isbn: Optional[str] = None) -> List[BookMetadata]:
+        """Search OpenLibrary API"""
+        self._respect_rate_limit()
+        
+        # Build search query
+        if isbn:
+            url = f"https://openlibrary.org/api/books?bibkeys=ISBN:{isbn}&format=json&jscmd=data"
+        else:
+            # Use search API
+            params = {'title': title}
+            if author:
+                params['author'] = author
+            params['limit'] = 10
+            
+            url = "https://openlibrary.org/search.json"
+            
+        # Check cache
+        cache_key = hashlib.md5(f"openlibrary_{url}_{json.dumps(params if 'params' in locals() else {})}".encode()).hexdigest()
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+            
+        try:
+            if isbn:
+                response = requests.get(url, timeout=10)
+            else:
+                response = requests.get(url, params=params, timeout=10)
+                
+            response.raise_for_status()
+            data = response.json()
+            
+            results = []
+            
+            if isbn and data:
+                # ISBN lookup response
+                for key, book_data in data.items():
+                    metadata = self._parse_openlibrary_book(book_data, title, author)
+                    if metadata:
+                        results.append(metadata)
+            else:
+                # Search response
+                for doc in data.get('docs', []):
+                    metadata = self._parse_openlibrary_doc(doc, title, author)
+                    if metadata:
+                        results.append(metadata)
+                        
+            # Cache results
+            self.cache[cache_key] = results
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"OpenLibrary API error: {e}")
+            return []
+            
+    def _parse_openlibrary_book(self, book_data: Dict, title: str, author: Optional[str]) -> Optional[BookMetadata]:
+        """Parse OpenLibrary book data"""
+        try:
+            return BookMetadata(
+                title=book_data.get('title', ''),
+                authors=[a['name'] for a in book_data.get('authors', [])],
+                isbn=self._extract_isbn_from_identifiers(book_data.get('identifiers', {})),
+                publisher=book_data.get('publishers', [{}])[0].get('name') if book_data.get('publishers') else None,
+                published_date=book_data.get('publish_date'),
+                description=book_data.get('notes'),
+                categories=book_data.get('subjects', []),
+                language='en',  # OpenLibrary doesn't always provide language
+                page_count=book_data.get('number_of_pages'),
+                cover_url=self._get_openlibrary_cover(book_data),
+                rating=None,  # OpenLibrary doesn't provide ratings
+                ratings_count=None,
+                source='openlibrary',
+                confidence=self._calculate_confidence(book_data, title, author)
             )
-            identifiers.append(identifier)
-    
-    engine = MetadataEnrichmentEngine(google_books_api_key=google_books_api_key)
-    return await engine.batch_enrich(identifiers)
+        except Exception as e:
+            self.logger.error(f"Error parsing OpenLibrary book data: {e}")
+            return None
+            
+    def _parse_openlibrary_doc(self, doc: Dict, title: str, author: Optional[str]) -> Optional[BookMetadata]:
+        """Parse OpenLibrary search document"""
+        try:
+            return BookMetadata(
+                title=doc.get('title', ''),
+                authors=doc.get('author_name', []),
+                isbn=doc.get('isbn', [None])[0] if doc.get('isbn') else None,
+                publisher=doc.get('publisher', [None])[0] if doc.get('publisher') else None,
+                published_date=str(doc.get('first_publish_year')) if doc.get('first_publish_year') else None,
+                description=None,  # Not available in search results
+                categories=doc.get('subject', []),
+                language=doc.get('language', ['en'])[0],
+                page_count=None,  # Not available in search results
+                cover_url=self._get_openlibrary_cover_from_doc(doc),
+                rating=None,
+                ratings_count=None,
+                source='openlibrary',
+                confidence=self._calculate_confidence(doc, title, author)
+            )
+        except Exception as e:
+            self.logger.error(f"Error parsing OpenLibrary doc: {e}")
+            return None
+            
+    def _extract_isbn(self, identifiers: List[Dict]) -> Optional[str]:
+        """Extract ISBN from Google Books identifiers"""
+        for identifier in identifiers:
+            if identifier.get('type') in ['ISBN_13', 'ISBN_10']:
+                return identifier.get('identifier')
+        return None
+        
+    def _extract_isbn_from_identifiers(self, identifiers: Dict) -> Optional[str]:
+        """Extract ISBN from OpenLibrary identifiers"""
+        isbn_list = identifiers.get('isbn_13', identifiers.get('isbn_10', []))
+        return isbn_list[0] if isbn_list else None
+        
+    def _extract_cover_url(self, image_links: Dict) -> Optional[str]:
+        """Extract cover URL from Google Books image links"""
+        for size in ['large', 'medium', 'small', 'thumbnail']:
+            if size in image_links:
+                return image_links[size]
+        return None
+        
+    def _get_openlibrary_cover(self, book_data: Dict) -> Optional[str]:
+        """Get cover URL from OpenLibrary book data"""
+        if 'cover' in book_data:
+            cover_id = book_data['cover'].get('large') or book_data['cover'].get('medium') or book_data['cover'].get('small')
+            if cover_id:
+                return f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg"
+        return None
+        
+    def _get_openlibrary_cover_from_doc(self, doc: Dict) -> Optional[str]:
+        """Get cover URL from OpenLibrary search doc"""
+        if 'cover_i' in doc:
+            return f"https://covers.openlibrary.org/b/id/{doc['cover_i']}-L.jpg"
+        return None
+        
+    def _calculate_confidence(self, data: Dict, title: str, author: Optional[str]) -> float:
+        """Calculate confidence score for metadata match"""
+        confidence = 0.0
+        
+        # Title matching
+        data_title = data.get('title', '').lower()
+        if title.lower() in data_title or data_title in title.lower():
+            confidence += 0.4
+        elif self._fuzzy_match(title.lower(), data_title):
+            confidence += 0.2
+            
+        # Author matching
+        if author:
+            data_authors = []
+            if 'authors' in data:
+                if isinstance(data['authors'], list):
+                    data_authors = [a.get('name', a) if isinstance(a, dict) else str(a) for a in data['authors']]
+            elif 'author_name' in data:
+                data_authors = data['author_name']
+                
+            author_match = any(
+                author.lower() in data_author.lower() or data_author.lower() in author.lower()
+                for data_author in data_authors
+            )
+            if author_match:
+                confidence += 0.3
+                
+        # Additional metadata presence
+        if data.get('description') or data.get('notes'):
+            confidence += 0.1
+        if data.get('publisher') or data.get('publishers'):
+            confidence += 0.1
+        if data.get('publishedDate') or data.get('publish_date') or data.get('first_publish_year'):
+            confidence += 0.1
+            
+        return min(1.0, confidence)
+        
+    def _fuzzy_match(self, str1: str, str2: str, threshold: float = 0.8) -> bool:
+        """Simple fuzzy string matching"""
+        if not str1 or not str2:
+            return False
+            
+        # Simple Jaccard similarity
+        words1 = set(str1.split())
+        words2 = set(str2.split())
+        
+        if not words1 or not words2:
+            return False
+            
+        intersection = len(words1 & words2)
+        union = len(words1 | words2)
+        
+        return intersection / union >= threshold
+        
+    def _deduplicate_results(self, results: List[BookMetadata]) -> List[BookMetadata]:
+        """Remove duplicate results"""
+        seen = set()
+        deduplicated = []
+        
+        for result in results:
+            # Create a key based on title and first author
+            key = (
+                result.title.lower().strip(),
+                result.authors[0].lower().strip() if result.authors else ''
+            )
+            
+            if key not in seen:
+                seen.add(key)
+                deduplicated.append(result)
+                
+        return deduplicated
+        
+    def _rank_results(self, results: List[BookMetadata], title: str, author: Optional[str]) -> List[BookMetadata]:
+        """Rank results by relevance and confidence"""
+        def ranking_score(metadata: BookMetadata) -> float:
+            score = metadata.confidence
+            
+            # Boost score for exact title matches
+            if metadata.title.lower().strip() == title.lower().strip():
+                score += 0.2
+                
+            # Boost score for exact author matches
+            if author and any(a.lower().strip() == author.lower().strip() for a in metadata.authors):
+                score += 0.2
+                
+            # Boost score for more complete metadata
+            completeness = sum([
+                bool(metadata.description),
+                bool(metadata.publisher),
+                bool(metadata.published_date),
+                bool(metadata.isbn),
+                bool(metadata.cover_url),
+                bool(metadata.categories),
+            ]) / 6
+            score += completeness * 0.1
+            
+            return score
+            
+        return sorted(results, key=ranking_score, reverse=True)
+        
+    def _respect_rate_limit(self):
+        """Ensure rate limiting between API calls"""
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        
+        if time_since_last < self.rate_limit_delay:
+            sleep_time = self.rate_limit_delay - time_since_last
+            time.sleep(sleep_time)
+            
+        self.last_request_time = time.time()
+        
+    def get_book_details(self, isbn: str) -> Optional[BookMetadata]:
+        """Get detailed book information by ISBN"""
+        results = self.enrich_metadata("", isbn=isbn)
+        return results[0] if results else None
+        
+    def search_by_title_author(self, title: str, author: str) -> List[BookMetadata]:
+        """Search specifically by title and author"""
+        return self.enrich_metadata(title, author)
+        
+    def bulk_enrich(self, books: List[Tuple[str, Optional[str], Optional[str]]]) -> List[List[BookMetadata]]:
+        """Bulk enrich multiple books"""
+        results = []
+        for title, author, isbn in books:
+            book_results = self.enrich_metadata(title, author, isbn)
+            results.append(book_results)
+            # Add delay between bulk requests
+            time.sleep(self.rate_limit_delay)
+        return results

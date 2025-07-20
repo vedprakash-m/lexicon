@@ -2,6 +2,17 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
 import { useLexiconStore } from '@/store'
 
+// Mock Tauri API
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: vi.fn().mockImplementation((command, args) => {
+    // Mock save_app_settings to always succeed
+    if (command === 'save_app_settings') {
+      return Promise.resolve({ success: true, data: true });
+    }
+    return Promise.resolve({ success: true, data: null });
+  })
+}));
+
 // Mock IndexedDB for testing
 vi.mock('idb', () => ({
   openDB: vi.fn(() => Promise.resolve({
@@ -176,15 +187,16 @@ describe('useLexiconStore', () => {
     expect(dataset.chunkingStrategy.type).toBe('verse')
   })
 
-  it('updates settings correctly', () => {
-    act(() => {
-      useLexiconStore.getState().updateSettings({
+  it('updates settings correctly', async () => {
+    await act(async () => {
+      await useLexiconStore.getState().updateSettings({
         theme: 'dark',
         autoSave: false,
         notifications: {
           processingComplete: false,
           errors: true,
-          updates: true
+          updates: true,
+          cloudSync: true
         }
       })
     })

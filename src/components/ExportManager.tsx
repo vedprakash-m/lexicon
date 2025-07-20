@@ -62,11 +62,19 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
   const [customTemplate, setCustomTemplate] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [validationErrors, setValidationErrors] = useState<Record<number, string[]>>({});
+  const [previewData, setPreviewData] = useState<any[]>([]);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Load real export jobs from backend
   useEffect(() => {
     loadExportJobs();
   }, []);
+
+  // Validate configurations when they change
+  useEffect(() => {
+    validateAllConfigs();
+  }, [exportConfigs, customTemplate]);
 
   const loadExportJobs = async () => {
     try {
@@ -85,6 +93,77 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
     setExportConfigs(configs => 
       configs.map((config, i) => i === index ? { ...config, ...updates } : config)
     );
+    
+    // Clear validation errors for this config when it's updated
+    setValidationErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[index];
+      return newErrors;
+    });
+  };
+
+  const validateExportConfig = (config: ExportConfig, index: number): string[] => {
+    const errors: string[] = [];
+    
+    // Validate output path
+    if (!config.outputPath.trim()) {
+      errors.push('Output path is required');
+    } else if (!config.outputPath.endsWith(`.${config.format}`)) {
+      errors.push(`Output path should end with .${config.format}`);
+    }
+    
+    // Validate custom template
+    if (config.format === 'custom' && !customTemplate.trim()) {
+      errors.push('Custom template is required for custom format');
+    }
+    
+    // Validate fields
+    if (config.customFields && config.customFields.length > 0) {
+      const invalidFields = config.customFields.filter(field => !field.trim());
+      if (invalidFields.length > 0) {
+        errors.push('Custom fields cannot be empty');
+      }
+    }
+    
+    return errors;
+  };
+
+  const validateAllConfigs = (): boolean => {
+    const newErrors: Record<number, string[]> = {};
+    let isValid = true;
+    
+    exportConfigs.forEach((config, index) => {
+      const errors = validateExportConfig(config, index);
+      if (errors.length > 0) {
+        newErrors[index] = errors;
+        isValid = false;
+      }
+    });
+    
+    setValidationErrors(newErrors);
+    return isValid;
+  };
+
+  const generatePreview = async (configIndex: number = 0) => {
+    const config = exportConfigs[configIndex];
+    
+    try {
+      // Generate preview data based on the first few chunks
+      const sampleChunks = chunks.slice(0, 3);
+      const preview = await invoke<any[]>('generate_export_preview', {
+        chunks: sampleChunks,
+        config: {
+          ...config,
+          customTemplate: config.format === 'custom' ? customTemplate : undefined
+        }
+      });
+      
+      setPreviewData(preview);
+      setShowPreview(true);
+    } catch (error) {
+      console.error('Failed to generate preview:', error);
+      setPreviewData([]);
+    }
   };
 
   const addExportConfig = () => {
@@ -104,29 +183,43 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
   };
 
   const startExport = async (configIndex?: number) => {
+    // Validate configurations before starting export
+    if (!validateAllConfigs()) {
+      console.error('Export validation failed');
+      return;
+    }
+    
     const configs = configIndex !== undefined ? [exportConfigs[configIndex]] : exportConfigs;
     
     for (const config of configs) {
       try {
-        // Create export job in backend
+        // Create export job in backend with validation
         const jobId = await invoke<string>('create_export_job', {
-          config,
+          config: {
+            ...config,
+            customTemplate: config.format === 'custom' ? customTemplate : undefined
+          },
           sourceDatasetId: null // Could be connected to selected dataset in future
         });
         
-        // Start the export with sample data (in real implementation, would use actual data)
-        const sampleData = [
+        // Use actual chunk data instead of sample data
+        const exportData = chunks.length > 0 ? chunks : [
           { id: 1, text: "Sample text content", metadata: { source: "demo" } },
           { id: 2, text: "Another text sample", metadata: { source: "demo" } }
         ];
         
         await invoke('start_export_job', {
           jobId,
-          sourceData: sampleData
+          sourceData: exportData
         });
         
         // Refresh jobs list
         loadExportJobs();
+        
+        // Call completion callback if provided
+        if (onExportComplete) {
+          onExportComplete({ jobId, config });
+        }
         
       } catch (error) {
         console.error('Failed to start export:', error);
@@ -271,15 +364,63 @@ export const ExportManager: React.FC<ExportManagerProps> = ({ chunks, onExportCo
             {showAdvanced ? 'Hide' : 'Show'} Advanced Options
           </button>
           
-          <button
-            onClick={() => startExport(0)}
-            disabled={!exportConfigs[0].outputPath}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Play className="w-4 h-4" />
-            <span>Start Export</span>
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => generatePreview(0)}
+              className="flex items-center space-x-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Preview</span>
+            </button>
+            
+            <button
+              onClick={() => startExport(0)}
+              disabled={!exportConfigs[0].outputPath || validationErrors[0]?.length > 0}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Play className="w-4 h-4" />
+              <span>Start Export</span>
+            </button>
+          </div>
         </div>
+
+        {/* Validation Errors */}
+        {validationErrors[0] && validationErrors[0].length > 0 && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-start space-x-2">
+              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5" />
+              <div>
+                <h4 className="text-sm font-medium text-red-900">Validation Errors</h4>
+                <ul className="text-sm text-red-700 mt-1 space-y-1">
+                  {validationErrors[0].map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Preview Modal */}
+        {showPreview && (
+          <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-gray-900">Export Preview</h4>
+              <button
+                onClick={() => setShowPreview(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="max-h-64 overflow-y-auto">
+              <pre className="text-xs text-gray-800 whitespace-pre-wrap">
+                {JSON.stringify(previewData, null, 2)}
+              </pre>
+            </div>
+          </div>
+        )}
 
         {showAdvanced && (
           <div className="mt-6 p-4 bg-gray-50 rounded-md">

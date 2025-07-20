@@ -1,644 +1,496 @@
-"""
-Export Format System for Lexicon.
-
-This module provides comprehensive export capabilities for processed data in multiple formats
-including JSONL, Parquet, CSV, and custom formats with configurable options.
-"""
-
-import csv
 import json
-import logging
-import os
-import pandas as pd
-import time
-import zipfile
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, asdict
-from datetime import datetime
-from enum import Enum
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Union, Iterator, Callable
+import csv
 import xml.etree.ElementTree as ET
-
-try:
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-    PARQUET_AVAILABLE = True
-except ImportError:
-    PARQUET_AVAILABLE = False
-
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-class ExportFormat(Enum):
-    """Supported export formats."""
-    JSONL = "jsonl"
-    JSON = "json"
-    PARQUET = "parquet"
-    CSV = "csv"
-    TSV = "tsv"
-    XML = "xml"
-    MARKDOWN = "markdown"
-    TXT = "txt"
-    CUSTOM = "custom"
-
-
-class CompressionType(Enum):
-    """Supported compression types."""
-    NONE = "none"
-    GZIP = "gzip"
-    BZIP2 = "bzip2"
-    XZ = "xz"
-    ZIP = "zip"
-
+from pathlib import Path
+import pandas as pd
+import gzip
+import zipfile
+from typing import Dict, List, Optional, Any, Union
+from dataclasses import dataclass, asdict
+import logging
+from datetime import datetime
 
 @dataclass
 class ExportConfig:
-    """Configuration for export operations."""
-    format: ExportFormat
-    output_path: str
-    compression: CompressionType = CompressionType.NONE
-    batch_size: int = 1000
+    format: str
+    compression: Optional[str] = None
     include_metadata: bool = True
-    flatten_nested: bool = False
-    custom_fields: Optional[List[str]] = None
-    exclude_fields: Optional[List[str]] = None
-    date_format: str = "%Y-%m-%d %H:%M:%S"
-    encoding: str = "utf-8"
-    
-    # Format-specific options
-    csv_delimiter: str = ","
-    csv_quoting: int = csv.QUOTE_MINIMAL
-    json_indent: Optional[int] = 2
-    parquet_compression: str = "snappy"
-    xml_root_element: str = "data"
-    xml_item_element: str = "item"
-    
-    # Custom format options
-    custom_template: Optional[str] = None
-    custom_processor: Optional[Callable] = None
+    include_chunks: bool = True
+    include_relationships: bool = False
+    custom_fields: List[str] = None
+    output_structure: str = "flat"  # "flat", "nested", "hierarchical"
 
-
-@dataclass
-class ExportResult:
-    """Result of an export operation."""
-    success: bool
-    output_path: str
-    records_exported: int
-    file_size_bytes: int
-    export_time_seconds: float
-    format: ExportFormat
-    compression: CompressionType
-    errors: List[str] = None
-    metadata: Dict[str, Any] = None
-
-
-class BaseExporter(ABC):
-    """Abstract base class for all exporters."""
-    
-    def __init__(self, config: ExportConfig):
-        self.config = config
-        self.errors = []
+class ExportManager:
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
         
-    @abstractmethod
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        """Export data to the specified format."""
-        pass
-    
-    def _prepare_output_path(self) -> Path:
-        """Prepare the output path and create directories if needed."""
-        output_path = Path(self.config.output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        return output_path
-    
-    def _filter_fields(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Filter fields based on include/exclude configuration."""
-        if self.config.exclude_fields:
-            record = {k: v for k, v in record.items() if k not in self.config.exclude_fields}
+    def export_data(self, data: List[Dict], config: ExportConfig, output_path: str) -> bool:
+        """Export data in specified format"""
+        try:
+            output_path = Path(output_path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            if config.format.lower() == 'json':
+                return self._export_json(data, config, output_path)
+            elif config.format.lower() == 'jsonl':
+                return self._export_jsonl(data, config, output_path)
+            elif config.format.lower() == 'csv':
+                return self._export_csv(data, config, output_path)
+            elif config.format.lower() == 'parquet':
+                return self._export_parquet(data, config, output_path)
+            elif config.format.lower() == 'xml':
+                return self._export_xml(data, config, output_path)
+            elif config.format.lower() == 'langchain':
+                return self._export_langchain(data, config, output_path)
+            elif config.format.lower() == 'llamaindex':
+                return self._export_llamaindex(data, config, output_path)
+            elif config.format.lower() == 'haystack':
+                return self._export_haystack(data, config, output_path)
+            elif config.format.lower() == 'markdown':
+                return self._export_markdown(data, config, output_path)
+            else:
+                raise ValueError(f"Unsupported export format: {config.format}")
+                
+        except Exception as e:
+            self.logger.error(f"Export failed: {e}")
+            return False
+            
+    def _export_json(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as JSON"""
+        processed_data = self._process_data_for_export(data, config)
         
-        if self.config.custom_fields:
-            record = {k: v for k, v in record.items() if k in self.config.custom_fields}
+        json_data = {
+            'metadata': {
+                'export_timestamp': datetime.now().isoformat(),
+                'format': 'json',
+                'total_records': len(processed_data),
+                'config': asdict(config)
+            },
+            'data': processed_data
+        }
         
-        return record
-    
-    def _flatten_dict(self, d: Dict[str, Any], parent_key: str = '', sep: str = '.') -> Dict[str, Any]:
-        """Flatten nested dictionaries."""
+        if config.compression == 'gzip':
+            with gzip.open(f"{output_path}.gz", 'wt', encoding='utf-8') as f:
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+        else:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                json.dump(json_data, f, indent=2, ensure_ascii=False)
+                
+        return True
+        
+    def _export_jsonl(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as JSONL (JSON Lines)"""
+        processed_data = self._process_data_for_export(data, config)
+        
+        if config.compression == 'gzip':
+            with gzip.open(f"{output_path}.gz", 'wt', encoding='utf-8') as f:
+                for record in processed_data:
+                    json.dump(record, f, ensure_ascii=False)
+                    f.write('\n')
+        else:
+            with open(output_path, 'w', encoding='utf-8') as f:
+                for record in processed_data:
+                    json.dump(record, f, ensure_ascii=False)
+                    f.write('\n')
+                    
+        return True
+        
+    def _export_csv(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as CSV"""
+        processed_data = self._process_data_for_export(data, config)
+        
+        if not processed_data:
+            return False
+            
+        # Flatten nested data for CSV
+        flattened_data = []
+        for record in processed_data:
+            flat_record = self._flatten_dict(record)
+            flattened_data.append(flat_record)
+            
+        # Get all possible fieldnames
+        fieldnames = set()
+        for record in flattened_data:
+            fieldnames.update(record.keys())
+        fieldnames = sorted(list(fieldnames))
+        
+        with open(output_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(flattened_data)
+            
+        return True
+        
+    def _export_parquet(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as Parquet"""
+        processed_data = self._process_data_for_export(data, config)
+        
+        # Flatten data for DataFrame
+        flattened_data = []
+        for record in processed_data:
+            flat_record = self._flatten_dict(record)
+            flattened_data.append(flat_record)
+            
+        df = pd.DataFrame(flattened_data)
+        
+        # Handle compression
+        compression = None
+        if config.compression == 'gzip':
+            compression = 'gzip'
+        elif config.compression == 'snappy':
+            compression = 'snappy'
+            
+        df.to_parquet(output_path, compression=compression, index=False)
+        return True
+        
+    def _export_xml(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as XML"""
+        processed_data = self._process_data_for_export(data, config)
+        
+        root = ET.Element('export')
+        
+        # Add metadata
+        metadata = ET.SubElement(root, 'metadata')
+        ET.SubElement(metadata, 'timestamp').text = datetime.now().isoformat()
+        ET.SubElement(metadata, 'format').text = 'xml'
+        ET.SubElement(metadata, 'total_records').text = str(len(processed_data))
+        
+        # Add data
+        data_element = ET.SubElement(root, 'data')
+        
+        for record in processed_data:
+            record_element = ET.SubElement(data_element, 'record')
+            self._dict_to_xml(record, record_element)
+            
+        tree = ET.ElementTree(root)
+        tree.write(output_path, encoding='utf-8', xml_declaration=True)
+        return True
+        
+    def _export_langchain(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export in LangChain compatible format"""
+        langchain_data = []
+        
+        for record in data:
+            # LangChain Document format
+            doc = {
+                'page_content': record.get('text', ''),
+                'metadata': {
+                    'source': record.get('source', ''),
+                    'title': record.get('title', ''),
+                    'author': record.get('author', ''),
+                    'chunk_id': record.get('id', ''),
+                    'chunk_index': record.get('chunk_index', 0),
+                    'word_count': len(record.get('text', '').split()),
+                }
+            }
+            
+            # Add custom metadata
+            if config.include_metadata and 'metadata' in record:
+                doc['metadata'].update(record['metadata'])
+                
+            langchain_data.append(doc)
+            
+        # Save as JSON
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(langchain_data, f, indent=2, ensure_ascii=False)
+            
+        return True
+        
+    def _export_llamaindex(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export in LlamaIndex compatible format"""
+        llamaindex_data = []
+        
+        for record in data:
+            # LlamaIndex Document format
+            doc = {
+                'text': record.get('text', ''),
+                'doc_id': record.get('id', ''),
+                'embedding': None,  # Will be generated by LlamaIndex
+                'metadata': {
+                    'source': record.get('source', ''),
+                    'title': record.get('title', ''),
+                    'author': record.get('author', ''),
+                    'chunk_index': record.get('chunk_index', 0),
+                }
+            }
+            
+            # Add custom metadata
+            if config.include_metadata and 'metadata' in record:
+                doc['metadata'].update(record['metadata'])
+                
+            llamaindex_data.append(doc)
+            
+        # Save as JSON
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(llamaindex_data, f, indent=2, ensure_ascii=False)
+            
+        return True
+        
+    def _export_haystack(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export in Haystack compatible format"""
+        haystack_data = []
+        
+        for record in data:
+            # Haystack Document format
+            doc = {
+                'content': record.get('text', ''),
+                'id': record.get('id', ''),
+                'meta': {
+                    'source': record.get('source', ''),
+                    'title': record.get('title', ''),
+                    'author': record.get('author', ''),
+                    'chunk_index': record.get('chunk_index', 0),
+                    'word_count': len(record.get('text', '').split()),
+                }
+            }
+            
+            # Add custom metadata
+            if config.include_metadata and 'metadata' in record:
+                doc['meta'].update(record['metadata'])
+                
+            haystack_data.append(doc)
+            
+        # Save as JSON
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(haystack_data, f, indent=2, ensure_ascii=False)
+            
+        return True
+        
+    def _export_markdown(self, data: List[Dict], config: ExportConfig, output_path: Path) -> bool:
+        """Export as Markdown"""
+        markdown_content = []
+        
+        # Add header
+        markdown_content.append("# Exported Data\n")
+        markdown_content.append(f"**Export Date:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        markdown_content.append(f"**Total Records:** {len(data)}\n\n")
+        
+        for i, record in enumerate(data):
+            # Record header
+            title = record.get('title', f'Record {i+1}')
+            markdown_content.append(f"## {title}\n")
+            
+            # Metadata
+            if config.include_metadata and 'metadata' in record:
+                markdown_content.append("### Metadata\n")
+                for key, value in record['metadata'].items():
+                    markdown_content.append(f"- **{key}:** {value}\n")
+                markdown_content.append("\n")
+                
+            # Content
+            if 'text' in record:
+                markdown_content.append("### Content\n")
+                markdown_content.append(f"{record['text']}\n\n")
+                
+            # Separator
+            markdown_content.append("---\n\n")
+            
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.writelines(markdown_content)
+            
+        return True
+        
+    def _process_data_for_export(self, data: List[Dict], config: ExportConfig) -> List[Dict]:
+        """Process data based on export configuration"""
+        processed_data = []
+        
+        for record in data:
+            processed_record = {}
+            
+            # Always include basic fields
+            for field in ['id', 'text', 'title', 'author', 'source']:
+                if field in record:
+                    processed_record[field] = record[field]
+                    
+            # Include metadata if requested
+            if config.include_metadata and 'metadata' in record:
+                if config.output_structure == 'flat':
+                    # Flatten metadata into main record
+                    for key, value in record['metadata'].items():
+                        processed_record[f"metadata_{key}"] = value
+                else:
+                    processed_record['metadata'] = record['metadata']
+                    
+            # Include chunks if requested
+            if config.include_chunks and 'chunks' in record:
+                processed_record['chunks'] = record['chunks']
+                
+            # Include relationships if requested
+            if config.include_relationships and 'relationships' in record:
+                processed_record['relationships'] = record['relationships']
+                
+            # Include custom fields
+            if config.custom_fields:
+                for field in config.custom_fields:
+                    if field in record:
+                        processed_record[field] = record[field]
+                        
+            processed_data.append(processed_record)
+            
+        return processed_data
+        
+    def _flatten_dict(self, d: Dict, parent_key: str = '', sep: str = '_') -> Dict:
+        """Flatten nested dictionary"""
         items = []
         for k, v in d.items():
             new_key = f"{parent_key}{sep}{k}" if parent_key else k
             if isinstance(v, dict):
                 items.extend(self._flatten_dict(v, new_key, sep=sep).items())
-            elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], dict):
-                # Handle list of dictionaries
-                for i, item in enumerate(v):
-                    if isinstance(item, dict):
-                        items.extend(self._flatten_dict(item, f"{new_key}_{i}", sep=sep).items())
-                    else:
-                        items.append((f"{new_key}_{i}", item))
+            elif isinstance(v, list):
+                # Convert lists to strings for CSV compatibility
+                items.append((new_key, json.dumps(v) if v else ''))
             else:
                 items.append((new_key, v))
         return dict(items)
-    
-    def _process_record(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Process a single record before export."""
-        # Filter fields
-        record = self._filter_fields(record)
         
-        # Flatten if requested
-        if self.config.flatten_nested:
-            record = self._flatten_dict(record)
-        
-        # Format dates
-        for key, value in record.items():
-            if isinstance(value, datetime):
-                record[key] = value.strftime(self.config.date_format)
-        
-        return record
-    
-    def _add_compression(self, file_path: Path) -> Path:
-        """Add compression to the output file."""
-        if self.config.compression == CompressionType.NONE:
-            return file_path
-        
-        compressed_path = file_path.with_suffix(f"{file_path.suffix}.{self.config.compression.value}")
-        
-        try:
-            if self.config.compression == CompressionType.ZIP:
-                with zipfile.ZipFile(compressed_path, 'w', zipfile.ZIP_DEFLATED) as zf:
-                    zf.write(file_path, file_path.name)
-                os.remove(file_path)
-            else:
-                import gzip
-                import bz2
-                import lzma
-                
-                compression_modules = {
-                    CompressionType.GZIP: gzip,
-                    CompressionType.BZIP2: bz2,
-                    CompressionType.XZ: lzma
-                }
-                
-                module = compression_modules[self.config.compression]
-                with open(file_path, 'rb') as f_in:
-                    with module.open(compressed_path, 'wb') as f_out:
-                        f_out.write(f_in.read())
-                os.remove(file_path)
-            
-            return compressed_path
-        except Exception as e:
-            self.errors.append(f"Compression failed: {str(e)}")
-            return file_path
-
-
-class JSONLExporter(BaseExporter):
-    """Exporter for JSONL format (JSON Lines)."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
-        
-        try:
-            with open(output_path, 'w', encoding=self.config.encoding) as f:
-                for record in data:
-                    processed_record = self._process_record(record)
-                    json.dump(processed_record, f, ensure_ascii=False, default=str)
-                    f.write('\n')
-                    records_exported += 1
-            
-            # Apply compression if requested
-            final_path = self._add_compression(output_path)
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.JSONL,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
-            
-        except Exception as e:
-            logger.error(f"JSONL export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.JSONL,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-
-
-class JSONExporter(BaseExporter):
-    """Exporter for JSON format."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
-        
-        try:
-            # Collect all records
-            records = []
-            for record in data:
-                processed_record = self._process_record(record)
-                records.append(processed_record)
-                records_exported += 1
-            
-            # Write as JSON array
-            with open(output_path, 'w', encoding=self.config.encoding) as f:
-                json.dump(records, f, ensure_ascii=False, indent=self.config.json_indent, default=str)
-            
-            # Apply compression if requested
-            final_path = self._add_compression(output_path)
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.JSON,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
-            
-        except Exception as e:
-            logger.error(f"JSON export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.JSON,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-
-
-class ParquetExporter(BaseExporter):
-    """Exporter for Parquet format."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        if not PARQUET_AVAILABLE:
-            raise ImportError("PyArrow is required for Parquet export. Install with: pip install pyarrow")
-        
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
-        
-        try:
-            # Collect records and convert to DataFrame
-            records = []
-            for record in data:
-                processed_record = self._process_record(record)
-                records.append(processed_record)
-                records_exported += 1
-            
-            if records:
-                df = pd.DataFrame(records)
-                # Convert to Parquet
-                df.to_parquet(
-                    output_path,
-                    compression=self.config.parquet_compression,
-                    index=False
-                )
-            else:
-                # Create empty Parquet file
-                df = pd.DataFrame()
-                df.to_parquet(output_path, index=False)
-            
-            # Apply compression if requested (note: Parquet has built-in compression)
-            final_path = self._add_compression(output_path) if self.config.compression != CompressionType.NONE else output_path
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.PARQUET,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
-            
-        except Exception as e:
-            logger.error(f"Parquet export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.PARQUET,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-
-
-class CSVExporter(BaseExporter):
-    """Exporter for CSV format."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
-        
-        try:
-            # Collect records to determine all fieldnames
-            records = []
-            fieldnames = set()
-            
-            for record in data:
-                processed_record = self._process_record(record)
-                records.append(processed_record)
-                fieldnames.update(processed_record.keys())
-                records_exported += 1
-            
-            fieldnames = sorted(list(fieldnames))
-            
-            # Write CSV
-            with open(output_path, 'w', newline='', encoding=self.config.encoding) as f:
-                writer = csv.DictWriter(
-                    f,
-                    fieldnames=fieldnames,
-                    delimiter=self.config.csv_delimiter,
-                    quoting=self.config.csv_quoting
-                )
-                writer.writeheader()
-                writer.writerows(records)
-            
-            # Apply compression if requested
-            final_path = self._add_compression(output_path)
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.CSV,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
-            
-        except Exception as e:
-            logger.error(f"CSV export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.CSV,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-
-
-class XMLExporter(BaseExporter):
-    """Exporter for XML format."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
-        
-        try:
-            root = ET.Element(self.config.xml_root_element)
-            
-            for record in data:
-                processed_record = self._process_record(record)
-                item_elem = ET.SubElement(root, self.config.xml_item_element)
-                self._dict_to_xml(processed_record, item_elem)
-                records_exported += 1
-            
-            # Write XML
-            tree = ET.ElementTree(root)
-            ET.indent(tree, space="  ", level=0)
-            tree.write(output_path, encoding=self.config.encoding, xml_declaration=True)
-            
-            # Apply compression if requested
-            final_path = self._add_compression(output_path)
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.XML,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
-            
-        except Exception as e:
-            logger.error(f"XML export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.XML,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-    
-    def _dict_to_xml(self, data: Dict[str, Any], parent: ET.Element):
-        """Convert dictionary to XML elements."""
-        for key, value in data.items():
-            # Sanitize element name
-            elem_name = str(key).replace(' ', '_').replace('-', '_')
-            elem = ET.SubElement(parent, elem_name)
+    def _dict_to_xml(self, d: Dict, parent: ET.Element):
+        """Convert dictionary to XML elements"""
+        for key, value in d.items():
+            # Clean key name for XML
+            clean_key = re.sub(r'[^a-zA-Z0-9_]', '_', str(key))
             
             if isinstance(value, dict):
-                self._dict_to_xml(value, elem)
+                child = ET.SubElement(parent, clean_key)
+                self._dict_to_xml(value, child)
             elif isinstance(value, list):
-                for i, item in enumerate(value):
-                    item_elem = ET.SubElement(elem, f"item_{i}")
+                for item in value:
+                    child = ET.SubElement(parent, clean_key)
                     if isinstance(item, dict):
-                        self._dict_to_xml(item, item_elem)
+                        self._dict_to_xml(item, child)
                     else:
-                        item_elem.text = str(item)
+                        child.text = str(item)
             else:
-                elem.text = str(value)
-
-
-class CustomExporter(BaseExporter):
-    """Exporter for custom formats using templates or processors."""
-    
-    def export(self, data: Iterator[Dict[str, Any]]) -> ExportResult:
-        start_time = time.time()
-        output_path = self._prepare_output_path()
-        records_exported = 0
+                child = ET.SubElement(parent, clean_key)
+                child.text = str(value) if value is not None else ''
+                
+    def create_obsidian_export(self, data: List[Dict], output_dir: str) -> bool:
+        """Create Obsidian-compatible export"""
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
         
         try:
-            if self.config.custom_processor:
-                # Use custom processor function
-                result = self.config.custom_processor(data, self.config)
-                records_exported = result.get('records_exported', 0)
-            else:
-                # Use template-based export
-                with open(output_path, 'w', encoding=self.config.encoding) as f:
-                    for record in data:
-                        processed_record = self._process_record(record)
-                        if self.config.custom_template:
-                            output_line = self.config.custom_template.format(**processed_record)
-                        else:
-                            output_line = str(processed_record)
-                        f.write(output_line + '\n')
-                        records_exported += 1
-            
-            # Apply compression if requested
-            final_path = self._add_compression(output_path)
-            file_size = final_path.stat().st_size
-            
-            return ExportResult(
-                success=True,
-                output_path=str(final_path),
-                records_exported=records_exported,
-                file_size_bytes=file_size,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.CUSTOM,
-                compression=self.config.compression,
-                errors=self.errors.copy() if self.errors else None
-            )
+            for record in data:
+                # Create filename from title
+                title = record.get('title', f"Document_{record.get('id', 'unknown')}")
+                safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_')).rstrip()
+                filename = f"{safe_title}.md"
+                
+                # Create markdown content
+                content = []
+                content.append(f"# {title}\n")
+                
+                # Add metadata as YAML frontmatter
+                if 'metadata' in record:
+                    content.append("---\n")
+                    for key, value in record['metadata'].items():
+                        content.append(f"{key}: {value}\n")
+                    content.append("---\n\n")
+                    
+                # Add main content
+                if 'text' in record:
+                    content.append(record['text'])
+                    
+                # Add tags
+                if 'keywords' in record:
+                    content.append(f"\n\n## Tags\n")
+                    for keyword in record['keywords']:
+                        content.append(f"#{keyword} ")
+                        
+                # Write file
+                with open(output_path / filename, 'w', encoding='utf-8') as f:
+                    f.writelines(content)
+                    
+            return True
             
         except Exception as e:
-            logger.error(f"Custom export failed: {str(e)}")
-            return ExportResult(
-                success=False,
-                output_path=str(output_path),
-                records_exported=records_exported,
-                file_size_bytes=0,
-                export_time_seconds=time.time() - start_time,
-                format=ExportFormat.CUSTOM,
-                compression=self.config.compression,
-                errors=[str(e)]
-            )
-
-
-class ExportManager:
-    """Main export manager that coordinates all export operations."""
-    
-    def __init__(self):
-        self.exporters = {
-            ExportFormat.JSONL: JSONLExporter,
-            ExportFormat.JSON: JSONExporter,
-            ExportFormat.PARQUET: ParquetExporter,
-            ExportFormat.CSV: CSVExporter,
-            ExportFormat.TSV: lambda config: CSVExporter({**asdict(config), 'csv_delimiter': '\t'}),
-            ExportFormat.XML: XMLExporter,
-            ExportFormat.CUSTOM: CustomExporter
-        }
-    
-    def export(self, data: Union[List[Dict[str, Any]], Iterator[Dict[str, Any]]], config: ExportConfig) -> ExportResult:
-        """Export data using the specified configuration."""
-        if config.format not in self.exporters:
-            raise ValueError(f"Unsupported export format: {config.format}")
-        
-        # Convert list to iterator if needed
-        if isinstance(data, list):
-            data = iter(data)
-        
-        exporter_class = self.exporters[config.format]
-        exporter = exporter_class(config)
-        
-        return exporter.export(data)
-    
-    def batch_export(self, data: Union[List[Dict[str, Any]], Iterator[Dict[str, Any]]], 
-                    configs: List[ExportConfig]) -> List[ExportResult]:
-        """Export data to multiple formats simultaneously."""
-        results = []
-        
-        # Convert data to list to allow multiple iterations
-        if hasattr(data, '__iter__') and not isinstance(data, list):
-            data = list(data)
-        
-        for config in configs:
-            result = self.export(data, config)
-            results.append(result)
-        
-        return results
-    
-    def get_supported_formats(self) -> List[str]:
-        """Get list of supported export formats."""
-        return [fmt.value for fmt in ExportFormat]
-    
-    def validate_config(self, config: ExportConfig) -> List[str]:
-        """Validate export configuration and return any errors."""
-        errors = []
-        
-        # Check format support
-        if config.format not in self.exporters:
-            errors.append(f"Unsupported format: {config.format}")
-        
-        # Check Parquet dependencies
-        if config.format == ExportFormat.PARQUET and not PARQUET_AVAILABLE:
-            errors.append("PyArrow is required for Parquet export. Install with: pip install pyarrow")
-        
-        # Check output path
+            self.logger.error(f"Obsidian export failed: {e}")
+            return False
+            
+    def create_notion_export(self, data: List[Dict], output_path: str) -> bool:
+        """Create Notion-compatible CSV export"""
         try:
-            output_path = Path(config.output_path)
-            if not output_path.parent.exists():
-                output_path.parent.mkdir(parents=True, exist_ok=True)
+            notion_data = []
+            
+            for record in data:
+                notion_record = {
+                    'Name': record.get('title', ''),
+                    'Content': record.get('text', ''),
+                    'Author': record.get('author', ''),
+                    'Source': record.get('source', ''),
+                    'Tags': ', '.join(record.get('keywords', [])),
+                    'Created': datetime.now().strftime('%Y-%m-%d'),
+                }
+                
+                # Add metadata fields
+                if 'metadata' in record:
+                    for key, value in record['metadata'].items():
+                        notion_record[f"Meta_{key}"] = str(value)
+                        
+                notion_data.append(notion_record)
+                
+            # Export as CSV
+            if notion_data:
+                fieldnames = list(notion_data[0].keys())
+                with open(output_path, 'w', newline='', encoding='utf-8') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(notion_data)
+                    
+            return True
+            
         except Exception as e:
-            errors.append(f"Invalid output path: {str(e)}")
-        
-        # Check custom format requirements
-        if config.format == ExportFormat.CUSTOM:
-            if not config.custom_template and not config.custom_processor:
-                errors.append("Custom format requires either custom_template or custom_processor")
-        
-        return errors
+            self.logger.error(f"Notion export failed: {e}")
+            return False
+            
+    def create_archive_export(self, data: List[Dict], output_path: str, include_assets: bool = True) -> bool:
+        """Create complete archive export"""
+        try:
+            with zipfile.ZipFile(output_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                # Export data in multiple formats
+                formats = ['json', 'jsonl', 'csv', 'markdown']
+                
+                for fmt in formats:
+                    config = ExportConfig(format=fmt, include_metadata=True)
+                    temp_path = f"temp_export.{fmt}"
+                    
+                    if self.export_data(data, config, temp_path):
+                        zipf.write(temp_path, f"data/export.{fmt}")
+                        Path(temp_path).unlink()  # Clean up temp file
+                        
+                # Add metadata file
+                metadata = {
+                    'export_timestamp': datetime.now().isoformat(),
+                    'total_records': len(data),
+                    'formats_included': formats,
+                    'version': '1.0'
+                }
+                
+                zipf.writestr('metadata.json', json.dumps(metadata, indent=2))
+                
+                # Add README
+                readme_content = """# Lexicon Export Archive
 
+This archive contains your processed data in multiple formats:
 
-# Utility functions for common export scenarios
-def export_chunks_to_jsonl(chunks: List[Dict[str, Any]], output_path: str, **kwargs) -> ExportResult:
-    """Convenience function to export chunks to JSONL format."""
-    config = ExportConfig(
-        format=ExportFormat.JSONL,
-        output_path=output_path,
-        **kwargs
-    )
-    manager = ExportManager()
-    return manager.export(chunks, config)
+- `data/export.json` - Complete data in JSON format
+- `data/export.jsonl` - Data in JSON Lines format (one record per line)
+- `data/export.csv` - Tabular data in CSV format
+- `data/export.markdown` - Human-readable Markdown format
+- `metadata.json` - Export metadata and information
 
+## Usage
 
-def export_chunks_to_parquet(chunks: List[Dict[str, Any]], output_path: str, **kwargs) -> ExportResult:
-    """Convenience function to export chunks to Parquet format."""
-    config = ExportConfig(
-        format=ExportFormat.PARQUET,
-        output_path=output_path,
-        **kwargs
-    )
-    manager = ExportManager()
-    return manager.export(chunks, config)
+Choose the format that best fits your needs:
+- JSON/JSONL for programmatic access
+- CSV for spreadsheet applications
+- Markdown for documentation or review
 
-
-def export_chunks_to_csv(chunks: List[Dict[str, Any]], output_path: str, **kwargs) -> ExportResult:
-    """Convenience function to export chunks to CSV format."""
-    # Set default flatten_nested=True for CSV if not specified
-    if 'flatten_nested' not in kwargs:
-        kwargs['flatten_nested'] = True
-    
-    config = ExportConfig(
-        format=ExportFormat.CSV,
-        output_path=output_path,
-        **kwargs
-    )
-    manager = ExportManager()
-    return manager.export(chunks, config)
+Generated by Lexicon - Universal RAG Dataset Preparation Tool
+"""
+                zipf.writestr('README.md', readme_content)
+                
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Archive export failed: {e}")
+            return False

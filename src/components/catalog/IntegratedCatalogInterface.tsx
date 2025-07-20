@@ -109,6 +109,17 @@ const IntegratedCatalogInterface = () => {
     return () => clearTimeout(debounceTimer);
   }, [searchQuery, allBooks, catalogLoading]);
 
+  // Global event listener for file upload
+  useEffect(() => {
+    const handleOpenFileUpload = () => setShowUploadDialog(true);
+    
+    window.addEventListener('lexicon:open-file-upload', handleOpenFileUpload);
+    
+    return () => {
+      window.removeEventListener('lexicon:open-file-upload', handleOpenFileUpload);
+    };
+  }, []);
+
   // Get unique values for filter options
   const filterOptions = useMemo(() => {
     const categories = new Set<string>();

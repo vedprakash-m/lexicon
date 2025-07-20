@@ -3,6 +3,14 @@ import { immer } from 'zustand/middleware/immer';
 import { persist } from 'zustand/middleware';
 import { LexiconStore, AppState, SourceText, Dataset, AppSettings, ChunkingStrategy, ExportConfig } from './types';
 import { v4 as uuidv4 } from 'uuid';
+import { invoke } from '@tauri-apps/api/core';
+
+// API Response type to match backend
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
 
 // Default settings
 const defaultChunkingStrategy: ChunkingStrategy = {
@@ -245,18 +253,78 @@ export const useLexiconStore = create<LexiconStore>()(
       },
 
       // Settings actions
-      updateSettings: (updates) => {
-        set((state) => {
-          addToHistory(state);
-          state.settings = { ...state.settings, ...updates };
-        });
+      updateSettings: async (updates) => {
+        // Validate settings before updating
+        const currentSettings = get().settings;
+        const newSettings = { ...currentSettings, ...updates };
+        
+        // Basic validation
+        if (newSettings.cloudSync.syncInterval < 1) {
+          throw new Error('Sync interval must be at least 1 minute');
+        }
+        
+        if (newSettings.backupFrequency && !['none', 'daily', 'weekly', 'monthly'].includes(newSettings.backupFrequency)) {
+          throw new Error('Invalid backup frequency');
+        }
+        
+        if (newSettings.theme && !['light', 'dark', 'system'].includes(newSettings.theme)) {
+          throw new Error('Invalid theme');
+        }
+
+        try {
+          // Save to backend first
+          const response = await invoke('save_app_settings', { settings: newSettings }) as ApiResponse<boolean>;
+          
+          if (response.success) {
+            // Only update local state if backend save succeeded
+            set((state) => {
+              addToHistory(state);
+              state.settings = newSettings;
+            });
+          } else {
+            throw new Error(response.error || 'Failed to save settings');
+          }
+        } catch (error) {
+          console.error('Failed to save settings:', error);
+          throw error;
+        }
       },
 
-      resetSettings: () => {
-        set((state) => {
-          addToHistory(state);
-          state.settings = { ...defaultSettings };
-        });
+      loadSettings: async () => {
+        try {
+          const response = await invoke('get_app_settings') as ApiResponse<AppSettings>;
+          
+          if (response.success && response.data) {
+            set((state) => {
+              state.settings = { ...defaultSettings, ...response.data };
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load settings from backend:', error);
+          // Fall back to default settings
+          set((state) => {
+            state.settings = defaultSettings;
+          });
+        }
+      },
+
+      resetSettings: async () => {
+        try {
+          // Save default settings to backend
+          const response = await invoke('save_app_settings', { settings: defaultSettings }) as ApiResponse<boolean>;
+          
+          if (response.success) {
+            set((state) => {
+              addToHistory(state);
+              state.settings = { ...defaultSettings };
+            });
+          } else {
+            throw new Error(response.error || 'Failed to reset settings');
+          }
+        } catch (error) {
+          console.error('Failed to reset settings:', error);
+          throw error;
+        }
       },
 
       // Reset entire store to initial state

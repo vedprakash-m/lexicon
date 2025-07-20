@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useLexiconStore } from './index';
+import { ErrorHandler } from '@/utils/errorHandler';
 import { SourceText, Dataset, ChunkingStrategy, ExportConfig, AppSettings } from './types';
 
 // Hook for managing source texts
@@ -248,7 +249,12 @@ export const useErrorHandling = () => {
   const handleError = useCallback((error: Error | string) => {
     const errorMessage = typeof error === 'string' ? error : error.message;
     setError(errorMessage);
-    console.error('Application error:', error);
+    
+    // Use standardized error logging
+    ErrorHandler.logError(error, {
+      component: 'GlobalErrorHandler',
+      operation: 'handleError'
+    });
   }, [setError]);
 
   return {

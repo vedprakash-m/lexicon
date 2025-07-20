@@ -1,10 +1,26 @@
 import React, { useState } from 'react';
 import { useLexiconStore } from '../store';
 import CloudSyncSettings from './CloudSyncSettings';
+import { useToastActions } from './ui/toast';
 
 const Settings: React.FC = () => {
   const { settings, updateSettings } = useLexiconStore();
   const [activeTab, setActiveTab] = useState<'general' | 'cloud' | 'advanced'>('general');
+  const [isSaving, setIsSaving] = useState(false);
+  const { success, error } = useToastActions();
+
+  const handleSettingsUpdate = async (updates: any) => {
+    setIsSaving(true);
+    try {
+      await updateSettings(updates);
+      success('Settings saved successfully');
+    } catch (err) {
+      console.error('Failed to save settings:', err);
+      error('Failed to save settings', err instanceof Error ? err.message : undefined);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const tabs = [
     { id: 'general', label: 'General', icon: '⚙️' },
@@ -58,7 +74,7 @@ const Settings: React.FC = () => {
               </label>
               <select
                 value={settings.theme}
-                onChange={(e) => updateSettings({ theme: e.target.value as any })}
+                onChange={(e) => handleSettingsUpdate({ theme: e.target.value as any })}
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               >
                 <option value="system">System</option>
@@ -74,7 +90,7 @@ const Settings: React.FC = () => {
               </label>
               <select
                 value={settings.language}
-                onChange={(e) => updateSettings({ language: e.target.value })}
+                onChange={(e) => handleSettingsUpdate({ language: e.target.value })}
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               >
                 <option value="en">English</option>
@@ -90,7 +106,7 @@ const Settings: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={settings.autoSave}
-                  onChange={(e) => updateSettings({ autoSave: e.target.checked })}
+                  onChange={(e) => handleSettingsUpdate({ autoSave: e.target.checked })}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <div>
@@ -111,7 +127,7 @@ const Settings: React.FC = () => {
               </label>
               <select
                 value={settings.backupFrequency}
-                onChange={(e) => updateSettings({ backupFrequency: e.target.value as any })}
+                onChange={(e) => handleSettingsUpdate({ backupFrequency: e.target.value as any })}
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               >
                 <option value="none">Never</option>
@@ -134,7 +150,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.notifications.processingComplete}
-                    onChange={(e) => updateSettings({
+                    onChange={(e) => handleSettingsUpdate({
                       notifications: {
                         ...settings.notifications,
                         processingComplete: e.target.checked
@@ -151,7 +167,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.notifications.errors}
-                    onChange={(e) => updateSettings({
+                    onChange={(e) => handleSettingsUpdate({
                       notifications: {
                         ...settings.notifications,
                         errors: e.target.checked
@@ -168,7 +184,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.notifications.updates}
-                    onChange={(e) => updateSettings({
+                    onChange={(e) => handleSettingsUpdate({
                       notifications: {
                         ...settings.notifications,
                         updates: e.target.checked
@@ -185,7 +201,7 @@ const Settings: React.FC = () => {
                   <input
                     type="checkbox"
                     checked={settings.notifications.cloudSync}
-                    onChange={(e) => updateSettings({
+                    onChange={(e) => handleSettingsUpdate({
                       notifications: {
                         ...settings.notifications,
                         cloudSync: e.target.checked
@@ -220,7 +236,7 @@ const Settings: React.FC = () => {
               <input
                 type="text"
                 value={settings.pythonPath || ''}
-                onChange={(e) => updateSettings({ pythonPath: e.target.value || undefined })}
+                onChange={(e) => handleSettingsUpdate({ pythonPath: e.target.value || undefined })}
                 placeholder="Auto-detect Python installation"
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               />
@@ -235,13 +251,14 @@ const Settings: React.FC = () => {
                 Default Chunking Strategy
               </label>
               <select
-                value={settings.defaultChunkingStrategy.strategy}
-                onChange={(e) => updateSettings({
+                value={settings.defaultChunkingStrategy.type}
+                onChange={(e) => handleSettingsUpdate({
                   defaultChunkingStrategy: {
                     ...settings.defaultChunkingStrategy,
-                    strategy: e.target.value as any
+                    type: e.target.value as any
                   }
                 })}
+                disabled={isSaving}
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               >
                 <option value="semantic">Semantic</option>
@@ -258,19 +275,20 @@ const Settings: React.FC = () => {
               </label>
               <input
                 type="number"
-                value={settings.defaultChunkingStrategy.chunkSize}
-                onChange={(e) => updateSettings({
+                value={settings.defaultChunkingStrategy.maxTokens || 512}
+                onChange={(e) => handleSettingsUpdate({
                   defaultChunkingStrategy: {
                     ...settings.defaultChunkingStrategy,
-                    chunkSize: parseInt(e.target.value)
+                    maxTokens: parseInt(e.target.value)
                   }
                 })}
+                disabled={isSaving}
                 min="100"
                 max="10000"
                 className="w-full rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
               />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Target size for text chunks (characters)
+                Maximum tokens per chunk
               </p>
             </div>
 
@@ -281,7 +299,7 @@ const Settings: React.FC = () => {
               </label>
               <select
                 value={settings.defaultExportConfig.format}
-                onChange={(e) => updateSettings({
+                onChange={(e) => handleSettingsUpdate({
                   defaultExportConfig: {
                     ...settings.defaultExportConfig,
                     format: e.target.value as any

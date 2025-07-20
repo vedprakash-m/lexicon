@@ -22,10 +22,10 @@ import {
   TabList, 
   Tab, 
   TabPanels, 
-  TabPanel,
-  Dialog
+  TabPanel
 } from '../ui';
 import { useBatchProcessing, type BatchJob, type SystemStatus } from '@/hooks/useBatchProcessing';
+import { BatchJobCreationDialog } from './BatchJobCreationDialog';
 
 export function BatchProcessing() {
   const { 
@@ -33,6 +33,7 @@ export function BatchProcessing() {
     systemStatus, 
     loading, 
     error,
+    createJob,
     pauseJob,
     resumeJob,
     cancelJob,
@@ -438,23 +439,12 @@ export function BatchProcessing() {
         </TabPanels>
       </Tabs>
 
-      {/* New Job Dialog (placeholder) */}
-      <Dialog open={showJobDialog} onClose={() => setShowJobDialog(false)}>
-        <div className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Create New Batch Job</h2>
-          <p className="text-muted-foreground mb-6">
-            Batch job creation wizard will be implemented in the next iteration.
-          </p>
-          <div className="flex justify-end space-x-3">
-            <Button variant="outline" onClick={() => setShowJobDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={() => setShowJobDialog(false)}>
-              Create Job
-            </Button>
-          </div>
-        </div>
-      </Dialog>
+      {/* Job Creation Dialog */}
+      <BatchJobCreationDialog
+        isOpen={showJobDialog}
+        onClose={() => setShowJobDialog(false)}
+        onSubmit={createJob}
+      />
     </div>
   );
 }

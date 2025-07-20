@@ -1,422 +1,347 @@
-"""
-Core web scraping engine for Lexicon.
-
-This module provides a robust, polite, and extensible web scraping system
-that forms the foundation for all content extraction operations.
-"""
-
 import asyncio
-import logging
-import time
-from typing import Dict, List, Optional, Any, Callable, Union
-from dataclasses import dataclass, field
-from urllib.parse import urljoin, urlparse
-from urllib.robotparser import RobotFileParser
 import aiohttp
 import requests
 from bs4 import BeautifulSoup
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+import time
+import logging
+from typing import Dict, List, Optional, Union
+from dataclasses import dataclass
+from urllib.parse import urljoin, urlparse
+import re
+import threading
+from enum import Enum
 
-# Configure logging
-logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ScrapingConfig:
-    """Configuration for web scraping operations."""
-    
-    # Rate limiting
-    requests_per_second: float = 0.5  # Default: 2 seconds between requests
-    max_concurrent_requests: int = 1   # Conservative default
-    
-    # Request configuration
-    timeout: int = 30
-    max_retries: int = 3
-    backoff_factor: float = 1.0
-    
-    # User agent and headers
-    user_agent: str = "Lexicon RAG Dataset Tool 1.0 (Educational Use)"
-    custom_headers: Dict[str, str] = field(default_factory=dict)
-    
-    # Politeness settings
-    respect_robots_txt: bool = True
-    cache_robots_txt: bool = True
-    
-    # Progress tracking
-    progress_callback: Optional[Callable[[str, int, int], None]] = None
-    
-    # Content filtering
-    max_content_size: int = 50 * 1024 * 1024  # 50MB limit
-    allowed_content_types: List[str] = field(default_factory=lambda: [
-        'text/html', 'text/plain', 'application/json', 'application/xml'
-    ])
-
+class JobStatus(Enum):
+    PENDING = "pending"
+    RUNNING = "running"
+    PAUSED = "paused"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
 
 @dataclass
 class ScrapingResult:
-    """Result of a web scraping operation."""
-    
     url: str
-    status_code: int
-    content: str
-    headers: Dict[str, str]
-    metadata: Dict[str, Any] = field(default_factory=dict)
-    error: Optional[str] = None
-    timestamp: float = field(default_factory=time.time)
-    
-    @property
-    def is_success(self) -> bool:
-        """Check if the scraping was successful."""
-        return self.status_code == 200 and self.error is None
-    
-    @property
-    def soup(self) -> BeautifulSoup:
-        """Get BeautifulSoup object for HTML content."""
-        if not hasattr(self, '_soup'):
-            self._soup = BeautifulSoup(self.content, 'lxml')
-        return self._soup
-
-
-class RateLimiter:
-    """Thread-safe rate limiter for web requests."""
-    
-    def __init__(self, requests_per_second: float):
-        self.min_interval = 1.0 / requests_per_second if requests_per_second > 0 else 0
-        self.last_request_time = 0
-        self._lock = asyncio.Lock()
-    
-    async def acquire(self):
-        """Acquire permission to make a request, respecting rate limits."""
-        async with self._lock:
-            current_time = time.time()
-            time_since_last = current_time - self.last_request_time
-            
-            if time_since_last < self.min_interval:
-                sleep_time = self.min_interval - time_since_last
-                logger.debug(f"Rate limiting: sleeping for {sleep_time:.2f} seconds")
-                await asyncio.sleep(sleep_time)
-            
-            self.last_request_time = time.time()
-
-
-class RobotsTxtChecker:
-    """Check robots.txt compliance for polite scraping."""
-    
-    def __init__(self, cache_enabled: bool = True):
-        self.cache_enabled = cache_enabled
-        self._cache: Dict[str, RobotFileParser] = {}
-    
-    def can_fetch(self, url: str, user_agent: str = "*") -> bool:
-        """Check if the URL can be fetched according to robots.txt."""
-        try:
-            parsed_url = urlparse(url)
-            robots_url = f"{parsed_url.scheme}://{parsed_url.netloc}/robots.txt"
-            
-            if self.cache_enabled and robots_url in self._cache:
-                rp = self._cache[robots_url]
-            else:
-                rp = RobotFileParser()
-                rp.set_url(robots_url)
-                rp.read()
-                
-                if self.cache_enabled:
-                    self._cache[robots_url] = rp
-            
-            return rp.can_fetch(user_agent, url)
-        
-        except Exception as e:
-            logger.warning(f"Could not check robots.txt for {url}: {e}")
-            return True  # Allow by default if robots.txt is inaccessible
-
+    title: str
+    text: str
+    metadata: Dict
+    links: List[str]
+    images: List[str]
+    extraction_method: str
+    quality_score: float
+    response_time: float
 
 class WebScraper:
-    """
-    Robust web scraping engine with built-in politeness, rate limiting,
-    error handling, and progress tracking.
-    """
-    
-    def __init__(self, config: Optional[ScrapingConfig] = None):
-        self.config = config or ScrapingConfig()
-        self.rate_limiter = RateLimiter(self.config.requests_per_second)
-        self.robots_checker = RobotsTxtChecker(self.config.cache_robots_txt)
-        self.session = self._create_session()
+    def __init__(self, rate_limit: float = 1.0, timeout: int = 30):
+        self.rate_limit = rate_limit  # seconds between requests
+        self.timeout = timeout
+        self.last_request_time = 0
+        self.logger = logging.getLogger(__name__)
+        self._is_paused = False
+        self._is_cancelled = False
+        self._pause_event = threading.Event()
+        self._pause_event.set()  # Start unpaused
         
-        # Statistics tracking
-        self.stats = {
-            'requests_made': 0,
-            'successful_requests': 0,
-            'failed_requests': 0,
-            'bytes_downloaded': 0,
-            'start_time': time.time()
-        }
-    
-    def _create_session(self) -> requests.Session:
-        """Create a configured requests session with retry logic."""
-        session = requests.Session()
-        
-        # Configure retry strategy
-        retry_strategy = Retry(
-            total=self.config.max_retries,
-            backoff_factor=self.config.backoff_factor,
-            status_forcelist=[429, 500, 502, 503, 504],
-            allowed_methods=["HEAD", "GET", "OPTIONS"]
-        )
-        
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        
-        # Set headers
-        headers = {
-            'User-Agent': self.config.user_agent,
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        # Common headers to appear more like a real browser
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1',
         }
-        headers.update(self.config.custom_headers)
-        session.headers.update(headers)
-        
-        return session
     
-    def _report_progress(self, message: str, current: int, total: int):
-        """Report progress to the configured callback."""
-        if self.config.progress_callback:
-            self.config.progress_callback(message, current, total)
+    def pause(self):
+        """Pause the scraping operation"""
+        self._is_paused = True
+        self._pause_event.clear()
+        self.logger.info("Scraping paused")
     
-    def _validate_content(self, response: requests.Response) -> bool:
-        """Validate response content before processing."""
-        # Check content type
-        content_type = response.headers.get('content-type', '').lower()
-        if not any(allowed in content_type for allowed in self.config.allowed_content_types):
-            logger.warning(f"Unsupported content type: {content_type}")
-            return False
-        
-        # Check content size
-        content_length = response.headers.get('content-length')
-        if content_length and int(content_length) > self.config.max_content_size:
-            logger.warning(f"Content too large: {content_length} bytes")
-            return False
-        
-        return True
+    def resume(self):
+        """Resume the scraping operation"""
+        self._is_paused = False
+        self._pause_event.set()
+        self.logger.info("Scraping resumed")
     
-    async def scrape_url(self, url: str) -> ScrapingResult:
-        """
-        Scrape a single URL with full error handling and politeness checks.
+    def cancel(self):
+        """Cancel the scraping operation"""
+        self._is_cancelled = True
+        self._pause_event.set()  # Wake up any waiting threads
+        self.logger.info("Scraping cancelled")
+    
+    def _check_pause_cancel(self):
+        """Check if job should be paused or cancelled"""
+        if self._is_cancelled:
+            raise asyncio.CancelledError("Scraping job was cancelled")
         
-        Args:
-            url: The URL to scrape
-            
-        Returns:
-            ScrapingResult with content and metadata
-        """
-        logger.info(f"Scraping URL: {url}")
+        if self._is_paused:
+            self.logger.info("Scraping paused, waiting to resume...")
+            self._pause_event.wait()  # Block until resumed
         
-        # Check robots.txt if enabled
-        if self.config.respect_robots_txt:
-            if not self.robots_checker.can_fetch(url, self.config.user_agent):
-                error_msg = f"Robots.txt disallows scraping of {url}"
-                logger.warning(error_msg)
-                return ScrapingResult(
-                    url=url,
-                    status_code=403,
-                    content="",
-                    headers={},
-                    error=error_msg
-                )
+        if self._is_cancelled:  # Check again after pause
+            raise asyncio.CancelledError("Scraping job was cancelled")
         
-        # Apply rate limiting
-        await self.rate_limiter.acquire()
+    @property
+    def status(self) -> JobStatus:
+        """Get current job status"""
+        if self._is_cancelled:
+            return JobStatus.CANCELLED
+        elif self._is_paused:
+            return JobStatus.PAUSED
+        else:
+            return JobStatus.RUNNING
+        
+    def scrape_url(self, url: str, custom_rules: Optional[Dict] = None) -> ScrapingResult:
+        """Scrape a single URL with rate limiting"""
+        self._check_pause_cancel()
+        self._respect_rate_limit()
+        
+        start_time = time.time()
         
         try:
-            self.stats['requests_made'] += 1
-            
-            # Make the request
-            response = self.session.get(url, timeout=self.config.timeout)
+            response = requests.get(url, headers=self.headers, timeout=self.timeout)
             response.raise_for_status()
             
-            # Validate content
-            if not self._validate_content(response):
-                return ScrapingResult(
-                    url=url,
-                    status_code=response.status_code,
-                    content="",
-                    headers=dict(response.headers),
-                    error="Content validation failed"
-                )
+            self._check_pause_cancel()  # Check again after request
             
-            # Update statistics
-            self.stats['successful_requests'] += 1
-            self.stats['bytes_downloaded'] += len(response.content)
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            # Extract metadata
-            metadata = {
-                'content_type': response.headers.get('content-type', ''),
-                'content_length': len(response.content),
-                'encoding': response.encoding,
-                'final_url': response.url,  # After redirects
-            }
-            
-            logger.debug(f"Successfully scraped {url}: {len(response.content)} bytes")
-            
-            return ScrapingResult(
-                url=url,
-                status_code=response.status_code,
-                content=response.text,
-                headers=dict(response.headers),
-                metadata=metadata
-            )
-            
-        except requests.exceptions.RequestException as e:
-            self.stats['failed_requests'] += 1
-            error_msg = f"Request failed for {url}: {str(e)}"
-            logger.error(error_msg)
-            
-            return ScrapingResult(
-                url=url,
-                status_code=getattr(e.response, 'status_code', 0) if hasattr(e, 'response') else 0,
-                content="",
-                headers={},
-                error=error_msg
-            )
-        
-        except Exception as e:
-            self.stats['failed_requests'] += 1
-            error_msg = f"Unexpected error scraping {url}: {str(e)}"
-            logger.error(error_msg)
-            
-            return ScrapingResult(
-                url=url,
-                status_code=0,
-                content="",
-                headers={},
-                error=error_msg
-            )
-    
-    async def scrape_urls(self, urls: List[str]) -> List[ScrapingResult]:
-        """
-        Scrape multiple URLs with concurrent processing and progress tracking.
-        
-        Args:
-            urls: List of URLs to scrape
-            
-        Returns:
-            List of ScrapingResult objects
-        """
-        total_urls = len(urls)
-        logger.info(f"Starting batch scraping of {total_urls} URLs")
-        
-        results = []
-        semaphore = asyncio.Semaphore(self.config.max_concurrent_requests)
-        
-        async def scrape_with_semaphore(url: str, index: int) -> ScrapingResult:
-            async with semaphore:
-                self._report_progress(f"Scraping {url}", index + 1, total_urls)
-                return await self.scrape_url(url)
-        
-        # Create tasks for concurrent execution
-        tasks = [
-            scrape_with_semaphore(url, i) 
-            for i, url in enumerate(urls)
-        ]
-        
-        # Execute all tasks
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        
-        # Handle any exceptions that occurred
-        processed_results = []
-        for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                error_result = ScrapingResult(
-                    url=urls[i],
-                    status_code=0,
-                    content="",
-                    headers={},
-                    error=f"Task execution failed: {str(result)}"
-                )
-                processed_results.append(error_result)
+            # Apply custom extraction rules if provided
+            if custom_rules:
+                result = self._apply_custom_rules(soup, url, custom_rules)
             else:
-                processed_results.append(result)
+                result = self._extract_generic_content(soup, url)
+                
+            result.response_time = time.time() - start_time
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"Failed to scrape {url}: {e}")
+            raise
+            
+    async def scrape_urls_async(self, urls: List[str], custom_rules: Optional[Dict] = None) -> List[ScrapingResult]:
+        """Scrape multiple URLs asynchronously"""
+        async with aiohttp.ClientSession(headers=self.headers, timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
+            tasks = []
+            for url in urls:
+                task = self._scrape_url_async(session, url, custom_rules)
+                tasks.append(task)
+                
+                # Add delay between starting requests to respect rate limiting
+                if len(tasks) > 1:
+                    await asyncio.sleep(self.rate_limit)
+                    
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            
+            # Filter out exceptions and return successful results
+            successful_results = []
+            for result in results:
+                if isinstance(result, ScrapingResult):
+                    successful_results.append(result)
+                else:
+                    self.logger.error(f"Async scraping failed: {result}")
+                    
+            return successful_results
+            
+    async def _scrape_url_async(self, session: aiohttp.ClientSession, url: str, custom_rules: Optional[Dict] = None) -> ScrapingResult:
+        """Async version of URL scraping"""
+        start_time = time.time()
         
-        logger.info(f"Batch scraping completed: {len(processed_results)} results")
-        return processed_results
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get scraping statistics."""
-        current_time = time.time()
-        duration = current_time - self.stats['start_time']
+        async with session.get(url) as response:
+            content = await response.read()
+            soup = BeautifulSoup(content, 'html.parser')
+            
+            if custom_rules:
+                result = self._apply_custom_rules(soup, url, custom_rules)
+            else:
+                result = self._extract_generic_content(soup, url)
+                
+            result.response_time = time.time() - start_time
+            return result
+            
+    def _extract_generic_content(self, soup: BeautifulSoup, url: str) -> ScrapingResult:
+        """Generic content extraction for any website"""
         
-        return {
-            **self.stats,
-            'duration_seconds': duration,
-            'success_rate': (
-                self.stats['successful_requests'] / max(1, self.stats['requests_made'])
-            ),
-            'average_request_time': duration / max(1, self.stats['requests_made']),
-            'bytes_per_second': self.stats['bytes_downloaded'] / max(1, duration),
-        }
-    
-    def close(self):
-        """Clean up resources."""
-        if hasattr(self, 'session'):
-            self.session.close()
-
-
-# Convenience functions for simple use cases
-
-async def scrape_single_url(
-    url: str, 
-    config: Optional[ScrapingConfig] = None
-) -> ScrapingResult:
-    """Convenience function to scrape a single URL."""
-    scraper = WebScraper(config)
-    try:
-        return await scraper.scrape_url(url)
-    finally:
-        scraper.close()
-
-
-async def scrape_multiple_urls(
-    urls: List[str], 
-    config: Optional[ScrapingConfig] = None
-) -> List[ScrapingResult]:
-    """Convenience function to scrape multiple URLs."""
-    scraper = WebScraper(config)
-    try:
-        return await scraper.scrape_urls(urls)
-    finally:
-        scraper.close()
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    async def main():
-        # Test configuration
-        config = ScrapingConfig(
-            requests_per_second=1.0,
-            timeout=10,
-            progress_callback=lambda msg, curr, total: print(f"{msg} ({curr}/{total})")
+        # Extract title
+        title = ""
+        if soup.title:
+            title = soup.title.string.strip()
+        elif soup.find('h1'):
+            title = soup.find('h1').get_text().strip()
+            
+        # Remove script and style elements
+        for script in soup(["script", "style", "nav", "header", "footer", "aside"]):
+            script.decompose()
+            
+        # Extract main content
+        main_content = None
+        
+        # Try to find main content area
+        for selector in ['main', 'article', '.content', '.post', '.entry', '#content']:
+            main_content = soup.select_one(selector)
+            if main_content:
+                break
+                
+        if not main_content:
+            main_content = soup.find('body') or soup
+            
+        # Extract text
+        text = main_content.get_text()
+        
+        # Clean up text
+        lines = (line.strip() for line in text.splitlines())
+        chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+        clean_text = '\n'.join(chunk for chunk in chunks if chunk)
+        
+        # Extract metadata
+        metadata = self._extract_metadata(soup)
+        
+        # Extract links
+        links = []
+        for link in soup.find_all('a', href=True):
+            absolute_url = urljoin(url, link['href'])
+            links.append(absolute_url)
+            
+        # Extract images
+        images = []
+        for img in soup.find_all('img', src=True):
+            absolute_url = urljoin(url, img['src'])
+            images.append(absolute_url)
+            
+        # Calculate quality score
+        word_count = len(clean_text.split())
+        quality_score = min(1.0, word_count / 200)  # Assume good quality if >200 words
+        
+        return ScrapingResult(
+            url=url,
+            title=title,
+            text=clean_text,
+            metadata=metadata,
+            links=links[:50],  # Limit to first 50 links
+            images=images[:20],  # Limit to first 20 images
+            extraction_method='generic',
+            quality_score=quality_score,
+            response_time=0  # Will be set by caller
         )
         
-        # Test URLs
-        test_urls = [
-            "https://httpbin.org/get",
-            "https://httpbin.org/user-agent",
-            "https://httpbin.org/headers"
-        ]
+    def _apply_custom_rules(self, soup: BeautifulSoup, url: str, rules: Dict) -> ScrapingResult:
+        """Apply custom extraction rules for specific sites"""
         
-        # Test scraping
-        results = await scrape_multiple_urls(test_urls, config)
+        # Extract title using custom selector
+        title = ""
+        if 'title_selector' in rules:
+            title_elem = soup.select_one(rules['title_selector'])
+            if title_elem:
+                title = title_elem.get_text().strip()
+                
+        # Extract content using custom selector
+        text = ""
+        if 'content_selector' in rules:
+            content_elem = soup.select_one(rules['content_selector'])
+            if content_elem:
+                # Remove unwanted elements
+                if 'remove_selectors' in rules:
+                    for remove_selector in rules['remove_selectors']:
+                        for elem in content_elem.select(remove_selector):
+                            elem.decompose()
+                            
+                text = content_elem.get_text()
+                
+                # Clean up text
+                lines = (line.strip() for line in text.splitlines())
+                chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+                text = '\n'.join(chunk for chunk in chunks if chunk)
+                
+        # Extract metadata
+        metadata = self._extract_metadata(soup)
         
-        for result in results:
-            print(f"URL: {result.url}")
-            print(f"Status: {result.status_code}")
-            print(f"Success: {result.is_success}")
-            if result.error:
-                print(f"Error: {result.error}")
-            print("---")
-    
-    # Run the test
-    asyncio.run(main())
+        # Add custom metadata
+        if 'metadata_selectors' in rules:
+            for key, selector in rules['metadata_selectors'].items():
+                elem = soup.select_one(selector)
+                if elem:
+                    metadata[key] = elem.get_text().strip()
+                    
+        # Extract links and images (generic approach)
+        links = [urljoin(url, link['href']) for link in soup.find_all('a', href=True)]
+        images = [urljoin(url, img['src']) for img in soup.find_all('img', src=True)]
+        
+        word_count = len(text.split())
+        quality_score = min(1.0, word_count / 200)
+        
+        return ScrapingResult(
+            url=url,
+            title=title,
+            text=text,
+            metadata=metadata,
+            links=links[:50],
+            images=images[:20],
+            extraction_method='custom_rules',
+            quality_score=quality_score,
+            response_time=0
+        )
+        
+    def _extract_metadata(self, soup: BeautifulSoup) -> Dict:
+        """Extract metadata from HTML"""
+        metadata = {}
+        
+        # Meta tags
+        for meta in soup.find_all('meta'):
+            name = meta.get('name') or meta.get('property') or meta.get('itemprop')
+            content = meta.get('content')
+            if name and content:
+                metadata[name] = content
+                
+        # Open Graph tags
+        for meta in soup.find_all('meta', property=re.compile(r'^og:')):
+            property_name = meta.get('property')
+            content = meta.get('content')
+            if property_name and content:
+                metadata[property_name] = content
+                
+        # Twitter Card tags
+        for meta in soup.find_all('meta', attrs={'name': re.compile(r'^twitter:')}):
+            name = meta.get('name')
+            content = meta.get('content')
+            if name and content:
+                metadata[name] = content
+                
+        # JSON-LD structured data
+        for script in soup.find_all('script', type='application/ld+json'):
+            try:
+                import json
+                structured_data = json.loads(script.string)
+                metadata['structured_data'] = structured_data
+            except:
+                pass
+                
+        return metadata
+        
+    def _respect_rate_limit(self):
+        """Ensure rate limiting between requests"""
+        current_time = time.time()
+        time_since_last = current_time - self.last_request_time
+        
+        if time_since_last < self.rate_limit:
+            sleep_time = self.rate_limit - time_since_last
+            time.sleep(sleep_time)
+            
+        self.last_request_time = time.time()
+        
+    def create_site_rules(self, domain: str, title_selector: str, content_selector: str, 
+                         remove_selectors: Optional[List[str]] = None,
+                         metadata_selectors: Optional[Dict[str, str]] = None) -> Dict:
+        """Helper to create custom extraction rules for a site"""
+        rules = {
+            'domain': domain,
+            'title_selector': title_selector,
+            'content_selector': content_selector,
+        }
+        
+        if remove_selectors:
+            rules['remove_selectors'] = remove_selectors
+            
+        if metadata_selectors:
+            rules['metadata_selectors'] = metadata_selectors
+            
+        return rules

@@ -119,7 +119,62 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       action: () => { 
         navigate('/library');
         onClose();
-        // Trigger add book action
+        // Trigger file upload dialog
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('lexicon:open-file-upload'));
+        }, 100);
+      }
+    },
+    {
+      id: 'action-new-project',
+      title: 'Create New Project',
+      description: 'Start a new project or collection',
+      icon: Settings,
+      category: 'actions',
+      keywords: ['create', 'new', 'project', 'collection'],
+      action: () => { 
+        onClose();
+        // Trigger new project dialog
+        window.dispatchEvent(new CustomEvent('lexicon:open-new-project'));
+      }
+    },
+    {
+      id: 'action-batch-import',
+      title: 'Batch Import',
+      description: 'Import multiple files at once',
+      icon: Download,
+      category: 'actions', 
+      keywords: ['batch', 'import', 'multiple', 'bulk'],
+      action: () => { 
+        navigate('/batch');
+        onClose();
+      }
+    },
+    {
+      id: 'action-settings',
+      title: 'Open Settings',
+      description: 'Configure application preferences',
+      icon: Settings,
+      category: 'actions',
+      keywords: ['settings', 'preferences', 'config'],
+      shortcut: '⌘,',
+      action: () => { 
+        onClose();
+        // Trigger settings dialog
+        window.dispatchEvent(new CustomEvent('lexicon:open-settings'));
+      }
+    },
+    {
+      id: 'action-notifications',
+      title: 'View Notifications',
+      description: 'Check recent notifications and updates',
+      icon: CommandIcon,
+      category: 'actions',
+      keywords: ['notifications', 'updates', 'alerts'],
+      action: () => { 
+        onClose();
+        // Trigger notifications dialog
+        window.dispatchEvent(new CustomEvent('lexicon:open-notifications'));
       }
     },
     
@@ -131,7 +186,26 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       icon: HelpCircle,
       category: 'help',
       keywords: ['help', 'documentation', 'support', 'guide'],
-      action: () => { onClose(); /* Help will be opened via separate mechanism */ }
+      shortcut: 'F1',
+      action: () => { 
+        onClose();
+        // Trigger help system
+        window.dispatchEvent(new CustomEvent('lexicon:open-help'));
+      }
+    },
+    {
+      id: 'help-shortcuts',
+      title: 'Keyboard Shortcuts',
+      description: 'View all available keyboard shortcuts',
+      icon: CommandIcon,
+      category: 'help', 
+      keywords: ['keyboard', 'shortcuts', 'hotkeys'],
+      shortcut: '?',
+      action: () => { 
+        onClose();
+        // Trigger shortcuts help
+        window.dispatchEvent(new CustomEvent('lexicon:show-shortcuts'));
+      }
     },
   ], [navigate, onClose]);
 

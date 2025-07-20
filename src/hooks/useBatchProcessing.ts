@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { ErrorHandler } from '@/utils/errorHandler';
 
 export interface BatchJob {
   id: string;
@@ -85,8 +86,13 @@ export function useBatchProcessing(): UseBatchProcessingResult {
       setJobs(jobsData);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch batch jobs:', err);
-      setError('Failed to load batch jobs');
+      const errorMessage = 'Failed to load batch jobs';
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'BatchProcessing',
+        operation: 'fetchJobs',
+        details: { invokeCommand: 'get_all_batch_jobs' }
+      });
     }
   }, []);
 
@@ -97,8 +103,13 @@ export function useBatchProcessing(): UseBatchProcessingResult {
       setSystemStatus(status);
       setError(null);
     } catch (err) {
-      console.error('Failed to fetch system status:', err);
-      setError('Failed to load system status');
+      const errorMessage = 'Failed to load system status';
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'BatchProcessing',
+        operation: 'fetchSystemStatus',
+        details: { invokeCommand: 'get_batch_system_status' }
+      });
     }
   }, []);
 

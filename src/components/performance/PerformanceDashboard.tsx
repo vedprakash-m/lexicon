@@ -1,479 +1,384 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
-import { Tabs, TabList, Tab, TabPanels, TabPanel } from '../ui/tabs';
-import {
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Cpu,
-  HardDrive,
-  MemoryStick,
-  Activity,
-  Play,
-  Square,
-  RefreshCw,
-  TrendingUp,
-  AlertCircle,
-} from 'lucide-react';
-import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
+import React, { useState, useEffect } from 'react';
+import { Activity, Cpu, HardDrive, Zap, AlertTriangle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
+import { PerformanceMonitor } from '../../utils/PerformanceMonitor';
 
 interface PerformanceDashboardProps {
   className?: string;
 }
 
-export function PerformanceDashboard({ className }: PerformanceDashboardProps) {
-  const {
-    metrics,
-    tasks,
-    loading,
-    error,
-    submitTask,
-    cancelTask,
-    optimizeSystem,
-    refreshAll,
-    getActiveTasks,
-  } = usePerformanceMonitor();
+export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ className = '' }) => {
+  const [performanceData, setPerformanceData] = useState<any>(null);
+  const [isMonitoring, setIsMonitoring] = useState(true);
+  const [refreshInterval, setRefreshInterval] = useState(5000);
 
-  const [newTaskType, setNewTaskType] = useState('web_scraping');
-  const [newTaskConfig, setNewTaskConfig] = useState('{}');
-
-  // Load initial data
   useEffect(() => {
-    refreshAll();
-  }, [refreshAll]);
+    const monitor = PerformanceMonitor.getInstance();
+    
+    const updateData = () => {
+      const data = monitor.exportData();
+      setPerformanceData(data);
+    };
 
-  const handleStartTask = async () => {
-    try {
-      const config = JSON.parse(newTaskConfig);
-      await submitTask({
-        task_type: newTaskType,
-        metadata: config,
-        priority: 'normal'
-      });
-      setNewTaskConfig('{}');
-    } catch (error) {
-      console.error('Failed to start task:', error);
-    }
+    // Initial load
+    updateData();
+
+    // Set up interval
+    const interval = setInterval(updateData, refreshInterval);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [refreshInterval]);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleOptimizeSystem = async () => {
-    await optimizeSystem({
-      optimization_type: 'low_memory'
-    });
+  const formatTime = (ms: number): string => {
+    if (ms < 1000) return `${ms.toFixed(0)}ms`;
+    return `${(ms / 1000).toFixed(2)}s`;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <Activity className="h-4 w-4 text-blue-500" />;
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4 text-gray-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
-    }
+  const getStatusColor = (value: number, thresholds: { good: number; warning: number }): string => {
+    if (value <= thresholds.good) return 'text-green-600 bg-green-100';
+    if (value <= thresholds.warning) return 'text-yellow-600 bg-yellow-100';
+    return 'text-red-600 bg-red-100';
   };
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case 'running':
-        return 'default';
-      case 'completed':
-        return 'secondary';
-      case 'failed':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
+  const getStatusIcon = (value: number, thresholds: { good: number; warning: number }) => {
+    if (value <= thresholds.good) return <CheckCircle className="w-4 h-4 text-green-600" />;
+    if (value <= thresholds.warning) return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
+    return <AlertTriangle className="w-4 h-4 text-red-600" />;
   };
 
-  if (loading) {
+  if (!performanceData) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2" />
-          <p className="text-muted-foreground">Loading performance data...</p>
+      <div className={`bg-white rounded-lg shadow p-6 ${className}`}>
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded"></div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
-          <p className="text-red-600">Error: {error}</p>
-          <Button onClick={refreshAll} className="mt-2">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  const activeTasks = getActiveTasks();
+  const { summary, thresholds, recommendations } = performanceData;
 
   return (
-    <div className={className}>
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Performance Dashboard</h1>
-          <p className="text-muted-foreground">
-            Monitor system performance and manage background tasks
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            onClick={refreshAll}
-            disabled={loading}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
+    <div className={`bg-white rounded-lg shadow ${className}`}>
+      {/* Header */}
+      <div className="border-b border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <Activity className="w-6 h-6 text-blue-600" />
+            <h2 className="text-xl font-semibold text-gray-900">Performance Dashboard</h2>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Refresh:</span>
+              <select
+                value={refreshInterval}
+                onChange={(e) => setRefreshInterval(Number(e.target.value))}
+                className="text-sm border border-gray-300 rounded px-2 py-1"
+              >
+                <option value={1000}>1s</option>
+                <option value={5000}>5s</option>
+                <option value={10000}>10s</option>
+                <option value={30000}>30s</option>
+              </select>
+            </div>
+            
+            <button
+              onClick={() => setIsMonitoring(!isMonitoring)}
+              className={`px-3 py-1 rounded text-sm font-medium ${
+                isMonitoring
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-gray-100 text-gray-800'
+              }`}
+            >
+              {isMonitoring ? 'Monitoring' : 'Paused'}
+            </button>
+          </div>
         </div>
       </div>
 
-      <Tabs defaultIndex={0}>
-        <TabList className="mb-6 flex space-x-1 rounded-lg bg-muted p-1">
-          <Tab className="flex-1">Overview</Tab>
-          <Tab className="flex-1">Background Tasks</Tab>
-          <Tab className="flex-1">System Optimization</Tab>
-        </TabList>
-
-        <TabPanels>
-          <TabPanel className="space-y-6">
-            {/* System Metrics Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>
-                  <Cpu className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {metrics?.cpu_usage?.toFixed(1) || '0.0'}%
-                  </div>
-                  <Progress value={metrics?.cpu_usage || 0} className="mt-2" />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Memory Usage</CardTitle>
-                  <MemoryStick className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {metrics?.memory_usage?.toFixed(1) || '0.0'}%
-                  </div>
-                  <Progress value={metrics?.memory_usage || 0} className="mt-2" />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Disk Usage</CardTitle>
-                  <HardDrive className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {metrics?.disk_usage?.toFixed(1) || '0.0'}%
-                  </div>
-                  <Progress value={metrics?.disk_usage || 0} className="mt-2" />
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Tasks</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {activeTasks.length}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    of {tasks.length} total
-                  </p>
-                </CardContent>
-              </Card>
+      <div className="p-6 space-y-6">
+        {/* Overall Status */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Overall Status</p>
+                <p className={`text-lg font-semibold ${thresholds.passed ? 'text-green-600' : 'text-red-600'}`}>
+                  {thresholds.passed ? 'Good' : 'Issues'}
+                </p>
+              </div>
+              {thresholds.passed ? (
+                <CheckCircle className="w-8 h-8 text-green-600" />
+              ) : (
+                <AlertTriangle className="w-8 h-8 text-red-600" />
+              )}
             </div>
+          </div>
 
-            {/* Recent Activity */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>
-                  Latest background tasks and system events
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {tasks.slice(0, 5).map((task) => (
-                    <div key={task.id} className="flex items-center space-x-3">
-                      {getStatusIcon(task.status)}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {task.task_type}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Started {new Date(Number(task.created_at) * 1000).toLocaleTimeString()}
-                        </p>
-                      </div>
-                      <Badge variant={getStatusBadgeVariant(task.status)}>
-                        {task.status}
-                      </Badge>
-                    </div>
-                  ))}
-                  {tasks.length === 0 && (
-                    <p className="text-muted-foreground text-center py-4">
-                      No recent activity
-                    </p>
-                  )}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Memory Usage</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatBytes(summary.memoryUsage.current)}
+                </p>
+              </div>
+              <HardDrive className="w-8 h-8 text-blue-600" />
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Page Load</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatTime(summary.bundleMetrics.totalLoadTime)}
+                </p>
+              </div>
+              <Zap className="w-8 h-8 text-yellow-600" />
+            </div>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Components</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {summary.renderPerformance.slowestComponents.length}
+                </p>
+              </div>
+              <Cpu className="w-8 h-8 text-purple-600" />
+            </div>
+          </div>
+        </div>
+
+        {/* Web Vitals */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Web Vitals</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {[
+              { 
+                name: 'FCP', 
+                label: 'First Contentful Paint',
+                value: summary.webVitals.fcp,
+                thresholds: { good: 1800, warning: 3000 },
+                unit: 'ms'
+              },
+              { 
+                name: 'LCP', 
+                label: 'Largest Contentful Paint',
+                value: summary.webVitals.lcp,
+                thresholds: { good: 2500, warning: 4000 },
+                unit: 'ms'
+              },
+              { 
+                name: 'FID', 
+                label: 'First Input Delay',
+                value: summary.webVitals.fid,
+                thresholds: { good: 100, warning: 300 },
+                unit: 'ms'
+              },
+              { 
+                name: 'CLS', 
+                label: 'Cumulative Layout Shift',
+                value: summary.webVitals.cls,
+                thresholds: { good: 0.1, warning: 0.25 },
+                unit: ''
+              },
+              { 
+                name: 'TTFB', 
+                label: 'Time to First Byte',
+                value: summary.webVitals.ttfb,
+                thresholds: { good: 800, warning: 1800 },
+                unit: 'ms'
+              },
+            ].map((vital) => (
+              <div key={vital.name} className="bg-white border border-gray-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-600">{vital.name}</span>
+                  {vital.value !== null && getStatusIcon(vital.value, vital.thresholds)}
                 </div>
-              </CardContent>
-            </Card>
-          </TabPanel>
-
-          <TabPanel className="space-y-6">
-            {/* Task Creation */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Create New Task</CardTitle>
-                <CardDescription>
-                  Start a new background task
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Task Type</label>
-                    <select
-                      value={newTaskType}
-                      onChange={(e) => setNewTaskType(e.target.value)}
-                      className="w-full p-2 border rounded-md"
-                    >
-                      <option value="web_scraping">Web Scraping</option>
-                      <option value="text_processing">Text Processing</option>
-                      <option value="chunk_generation">Content Chunking</option>
-                      <option value="metadata_enrichment">Metadata Enrichment</option>
-                      <option value="export">Data Export</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Configuration (JSON)</label>
-                    <textarea
-                      value={newTaskConfig}
-                      onChange={(e) => setNewTaskConfig(e.target.value)}
-                      placeholder='{"url": "example.com", "depth": 2}'
-                      className="w-full p-2 border rounded-md h-20 resize-none text-sm font-mono"
-                    />
-                  </div>
+                <div className="mb-1">
+                  <span className="text-lg font-semibold text-gray-900">
+                    {vital.value !== null ? `${vital.value.toFixed(vital.unit === 'ms' ? 0 : 3)}${vital.unit}` : 'N/A'}
+                  </span>
                 </div>
-                <Button onClick={handleStartTask} className="w-full">
-                  <Play className="h-4 w-4 mr-2" />
-                  Start Task
-                </Button>
-              </CardContent>
-            </Card>
+                <p className="text-xs text-gray-500">{vital.label}</p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            {/* Task List */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Background Tasks</CardTitle>
-                <CardDescription>
-                  Manage running and completed tasks
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {tasks.map((task) => (
-                    <div key={task.id} className="border rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-3">
-                          {getStatusIcon(task.status)}
-                          <div>
-                            <h4 className="font-medium">{task.task_type}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              Task ID: {task.id}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={getStatusBadgeVariant(task.status)}>
-                            {task.status}
-                          </Badge>
-                          {task.status === 'running' && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => cancelTask(task.id)}
-                            >
-                              <Square className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                      
-                      {task.progress !== undefined && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-sm">
-                            <span>Progress</span>
-                            <span>{task.progress}%</span>
-                          </div>
-                          <Progress value={task.progress} />
-                        </div>
+        {/* Memory Usage Chart */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Memory Usage</h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Current</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatBytes(summary.memoryUsage.current)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Average</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatBytes(summary.memoryUsage.average)}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-600">Peak</p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {formatBytes(summary.memoryUsage.peak)}
+                </p>
+              </div>
+            </div>
+            
+            {/* Memory usage bar */}
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-blue-600 h-3 rounded-full transition-all duration-300"
+                style={{
+                  width: `${Math.min((summary.memoryUsage.current / (500 * 1024 * 1024)) * 100, 100)}%`
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0 MB</span>
+              <span>500 MB (Target)</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Component Performance */}
+        {summary.renderPerformance.slowestComponents.length > 0 && (
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Slowest Components</h3>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="space-y-3">
+                {summary.renderPerformance.slowestComponents.slice(0, 5).map((component, index) => (
+                  <div key={component.name} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-sm font-medium text-gray-900">
+                        {component.name}
+                      </span>
+                      {component.averageTime > 16 && (
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                          Slow
+                        </span>
                       )}
-                      
-                      <div className="mt-2 text-xs text-muted-foreground">
-                        Created: {new Date(Number(task.created_at) * 1000).toLocaleString()}
-                        {task.completed_at && (
-                          <> • Completed: {new Date(Number(task.completed_at) * 1000).toLocaleString()}</>
-                        )}
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-gray-900">
+                        {formatTime(component.averageTime)} avg
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {formatTime(component.maxTime)} max
                       </div>
                     </div>
-                  ))}
-                  {tasks.length === 0 && (
-                    <div className="text-center py-8">
-                      <Activity className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-medium mb-2">No Background Tasks</h3>
-                      <p className="text-muted-foreground mb-4">
-                        Create a new task to get started
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabPanel>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
-          <TabPanel className="space-y-6">
-            {/* System Optimization */}
-            <Card>
-              <CardHeader>
-                <CardTitle>System Optimization</CardTitle>
-                <CardDescription>
-                  Optimize system performance and resource usage
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Button
-                    onClick={handleOptimizeSystem}
-                    className="h-20 flex-col space-y-2"
-                  >
-                    <MemoryStick className="h-6 w-6" />
-                    <span>Optimize Memory</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => optimizeSystem({
-                      optimization_type: 'performance'
-                    })}
-                  >
-                    <Cpu className="h-6 w-6" />
-                    <span>Optimize Performance</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => optimizeSystem({
-                      optimization_type: 'balanced'
-                    })}
-                  >
-                    <HardDrive className="h-6 w-6" />
-                    <span>Balanced Optimization</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="h-20 flex-col space-y-2"
-                    onClick={() => optimizeSystem({
-                      optimization_type: 'performance'
-                    })}
-                  >
-                    <TrendingUp className="h-6 w-6" />
-                    <span>Aggressive Optimization</span>
-                  </Button>
+        {/* Issues and Warnings */}
+        {(thresholds.issues.length > 0 || thresholds.warnings.length > 0) && (
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Issues & Warnings</h3>
+            <div className="space-y-3">
+              {thresholds.issues.map((issue, index) => (
+                <div key={index} className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Issue</p>
+                    <p className="text-sm text-red-700">{issue}</p>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              ))}
+              
+              {thresholds.warnings.map((warning, index) => (
+                <div key={index} className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800">Warning</p>
+                    <p className="text-sm text-yellow-700">{warning}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
-            {/* Performance Tips */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Performance Tips</CardTitle>
-                <CardDescription>
-                  Recommendations to improve system performance
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {metrics?.cpu_usage && metrics.cpu_usage > 80 && (
-                    <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
-                      <AlertTriangle className="h-5 w-5 text-yellow-500 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-800">High CPU Usage</h4>
-                        <p className="text-sm text-yellow-700">
-                          Consider reducing concurrent tasks or optimizing CPU-intensive operations.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {metrics?.memory_usage && metrics.memory_usage > 85 && (
-                    <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
-                      <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-red-800">High Memory Usage</h4>
-                        <p className="text-sm text-red-700">
-                          Free up memory by closing unused applications or optimizing data structures.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {metrics?.disk_usage && metrics.disk_usage > 90 && (
-                    <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg">
-                      <AlertCircle className="h-5 w-5 text-red-500 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-red-800">Low Disk Space</h4>
-                        <p className="text-sm text-red-700">
-                          Free up disk space by removing unnecessary files or archiving old data.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {(!metrics?.cpu_usage || metrics.cpu_usage < 80) &&
-                   (!metrics?.memory_usage || metrics.memory_usage < 85) &&
-                   (!metrics?.disk_usage || metrics.disk_usage < 90) && (
-                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-                      <CheckCircle className="h-5 w-5 text-green-500 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-green-800">System Running Optimally</h4>
-                        <p className="text-sm text-green-700">
-                          Your system is performing well. Continue monitoring for optimal performance.
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </TabPanel>
-        </TabPanels>
-      </Tabs>
+        {/* Recommendations */}
+        {recommendations.length > 0 && (
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">Optimization Recommendations</h3>
+            <div className="bg-blue-50 rounded-lg p-4">
+              <ul className="space-y-2">
+                {recommendations.map((recommendation, index) => (
+                  <li key={index} className="flex items-start space-x-2">
+                    <TrendingUp className="w-4 h-4 text-blue-600 mt-0.5" />
+                    <span className="text-sm text-blue-800">{recommendation}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-500">
+            Last updated: {new Date(performanceData.timestamp).toLocaleTimeString()}
+          </div>
+          
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                const monitor = PerformanceMonitor.getInstance();
+                monitor.clearMetrics();
+                setPerformanceData(monitor.exportData());
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              Clear Metrics
+            </button>
+            
+            <button
+              onClick={() => {
+                const dataStr = JSON.stringify(performanceData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `performance-report-${new Date().toISOString().split('T')[0]}.json`;
+                link.click();
+                URL.revokeObjectURL(url);
+              }}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+            >
+              Export Report
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};

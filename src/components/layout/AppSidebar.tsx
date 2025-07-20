@@ -1,25 +1,32 @@
-import { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
+  LayoutDashboard, 
   Library, 
-  FolderOpen, 
-  Download, 
-  Settings, 
-  BarChart3, 
-  BookOpen, 
+  FolderOpen,
+  Settings,
+  BarChart3,
   Plus,
   ChevronRight,
   ChevronDown,
-  Brain,
-  Search,
   Cloud,
-  Shield,
   Activity,
+  FileText,
+  Download,
+  Zap,
+  Database,
+  Users,
+  HelpCircle,
+  Search,
+  BookOpen,
+  Brain,
+  Shield,
   Cpu,
-  HardDrive,
-  Database
+  HardDrive
 } from 'lucide-react';
 import { Button } from '../ui';
+import { useSidebarStatus } from '@/hooks/useSidebarStatus';
+import { useCatalogManager } from '@/hooks/useCatalogManager';
 import { cn } from '../../lib/utils';
 
 interface SidebarItem {
@@ -31,79 +38,126 @@ interface SidebarItem {
   children?: SidebarItem[];
 }
 
-const sidebarItems: SidebarItem[] = [
-  {
-    id: 'dashboard',
-    label: 'Dashboard',
-    icon: BarChart3,
-    route: '/',
-  },
-  {
-    id: 'library',
-    label: 'Enhanced Catalog',
-    icon: Search,
-    count: 0,
-    route: '/library',
-    children: [
-      { id: 'all-books', label: 'All Books', icon: BookOpen, count: 0, route: '/library' },
-      { id: 'in-progress', label: 'In Progress', icon: Download, count: 0, route: '/library?status=processing' },
-      { id: 'completed', label: 'Completed', icon: Library, count: 0, route: '/library?status=completed' },
-    ]
-  },
-  {
-    id: 'collections',
-    label: 'Collections',
-    icon: FolderOpen,
-    count: 0,
-    route: '/projects',
-    children: [
-      { id: 'scripture', label: 'Structured Scriptures', icon: FolderOpen, count: 0, route: '/projects?type=scripture' },
-      { id: 'philosophy', label: 'Philosophy', icon: FolderOpen, count: 0, route: '/projects?type=philosophy' },
-      { id: 'literature', label: 'Literature', icon: FolderOpen, count: 0, route: '/projects?type=literature' },
-      { id: 'reference', label: 'Reference', icon: FolderOpen, count: 0, route: '/projects?type=reference' },
-    ]
-  },
-  {
-    id: 'processing',
-    label: 'Processing',
-    icon: Settings,
-    children: [
-      { id: 'sources', label: 'Sources & Rules', icon: Download, count: 0, route: '/sources' },
-      { id: 'scraping', label: 'Scraping Jobs', icon: Download, count: 0, route: '/scraping' },
-      { id: 'batch', label: 'Batch Processing', icon: Download, count: 0, route: '/batch' },
-      { id: 'chunking', label: 'Advanced Chunking', icon: Brain, route: '/chunking' },
-      { id: 'export', label: 'Export Manager', icon: Download, route: '/export' },
-      { id: 'queue', label: 'Processing Queue', icon: Download, count: 0, route: '/processing' },
-      { id: 'profiles', label: 'Processing Profiles', icon: Settings, count: 0, route: '/processing/profiles' },
-    ]
-  },
-  {
-    id: 'sync',
-    label: 'Sync & Backup',
-    icon: Cloud,
-    route: '/sync',
-    children: [
-      { id: 'cloud-sync', label: 'Cloud Sync', icon: Cloud, route: '/sync' },
-      { id: 'backups', label: 'Backups', icon: Shield, route: '/sync' },
-    ]
-  },
-  {
-    id: 'performance',
-    label: 'Performance',
-    icon: Activity,
-    route: '/performance',
-    children: [
-      { id: 'system-metrics', label: 'System Metrics', icon: Cpu, route: '/performance' },
-      { id: 'background-tasks', label: 'Background Tasks', icon: HardDrive, route: '/performance' },
-      { id: 'cache-management', label: 'Cache Management', icon: Database, route: '/cache' },
-    ]
-  },
-];
-
-export function AppSidebar() {
+export const AppSidebar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set(['library', 'collections']));
+  const [expandedSections, setExpandedSections] = useState<string[]>(['library']);
+  
+  const { status: sidebarStatus, loading: statusLoading } = useSidebarStatus();
+  const { books, stats, isLoading } = useCatalogManager();
+
+  // Calculate book counts from catalog data
+  const bookCounts = useMemo(() => {
+    if (!books || books.length === 0) {
+      return {
+        total: 0,
+        inProgress: 0,
+        completed: 0,
+        collections: 0
+      };
+    }
+
+    const total = books.length;
+    // For now, use simple categorization based on available data
+    // We'll update this once we know the actual status fields in BookMetadata
+    const inProgress = 0; // Placeholder - need to check actual status field
+    const completed = total; // Assuming all cataloged books are processed
+    
+    // Count unique categories as collections for now
+    const collections = new Set(books.flatMap(book => book.categories)).size;
+
+    return {
+      total,
+      inProgress,
+      completed,
+      collections
+    };
+  }, [books]);
+
+  // Dynamic sidebar items with real counts
+  const sidebarItems: SidebarItem[] = useMemo(() => [
+    {
+      id: 'dashboard',
+      label: 'Dashboard',
+      icon: BarChart3,
+      route: '/',
+    },
+    {
+      id: 'library',
+      label: 'Enhanced Catalog',
+      icon: Search,
+      count: bookCounts.total,
+      route: '/library',
+      children: [
+        { id: 'all-books', label: 'All Books', icon: BookOpen, count: bookCounts.total, route: '/library' },
+        { id: 'in-progress', label: 'In Progress', icon: Download, count: bookCounts.inProgress, route: '/library?status=processing' },
+        { id: 'completed', label: 'Completed', icon: Library, count: bookCounts.completed, route: '/library?status=completed' },
+      ]
+    },
+    {
+      id: 'collections',
+      label: 'Collections',
+      icon: FolderOpen,
+      count: bookCounts.collections,
+      route: '/projects',
+      children: [
+        { id: 'scripture', label: 'Structured Scriptures', icon: FolderOpen, count: 0, route: '/projects?type=scripture' },
+        { id: 'philosophy', label: 'Philosophy', icon: FolderOpen, count: 0, route: '/projects?type=philosophy' },
+        { id: 'literature', label: 'Literature', icon: FolderOpen, count: 0, route: '/projects?type=literature' },
+        { id: 'reference', label: 'Reference', icon: FolderOpen, count: 0, route: '/projects?type=reference' },
+      ]
+    },
+    {
+      id: 'processing',
+      label: 'Processing',
+      icon: Settings,
+      children: [
+        { id: 'sources', label: 'Sources & Rules', icon: Download, count: 0, route: '/sources' },
+        { id: 'scraping', label: 'Scraping Jobs', icon: Download, count: 0, route: '/scraping' },
+        { id: 'batch', label: 'Batch Processing', icon: Download, count: 0, route: '/batch' },
+        { id: 'chunking', label: 'Advanced Chunking', icon: Brain, route: '/chunking' },
+        { id: 'export', label: 'Export Manager', icon: Download, route: '/export' },
+        { id: 'queue', label: 'Processing Queue', icon: Download, count: sidebarStatus.processingCount, route: '/processing' },
+        { id: 'profiles', label: 'Processing Profiles', icon: Settings, count: 0, route: '/processing/profiles' },
+      ]
+    },
+    {
+      id: 'sync',
+      label: 'Sync & Backup',
+      icon: Cloud,
+      children: [
+        { id: 'sync-manager', label: 'Sync Manager', icon: Cloud, route: '/sync' },
+        { id: 'backups', label: 'Backup Manager', icon: HardDrive, route: '/backups' },
+        { id: 'data-manager', label: 'Data Manager', icon: Database, route: '/data' },
+      ]
+    },
+    {
+      id: 'monitoring',
+      label: 'Monitoring',
+      icon: Activity,
+      children: [
+        { id: 'performance', label: 'Performance Monitor', icon: Cpu, route: '/monitoring' },
+        { id: 'audit', label: 'Audit Logs', icon: FileText, route: '/audit' },
+        { id: 'security', label: 'Security Dashboard', icon: Shield, route: '/security' },
+      ]
+    },
+    {
+      id: 'help',
+      label: 'Help & Resources',
+      icon: HelpCircle,
+      children: [
+        { id: 'docs', label: 'Documentation', icon: FileText, route: '/docs' },
+        { id: 'api', label: 'API Reference', icon: FileText, route: '/api' },
+        { id: 'community', label: 'Community', icon: Users, route: '/community' },
+      ]
+    },
+    {
+      id: 'settings',
+      label: 'Settings',
+      icon: Settings,
+      route: '/settings',
+    },
+  ], [bookCounts, sidebarStatus.processingCount]);
   
   const handleAddBook = () => {
     navigate('/library');
@@ -124,17 +178,17 @@ export function AppSidebar() {
   const activeItem = getActiveItem();
 
   const toggleExpanded = (itemId: string) => {
-    const newExpanded = new Set(expandedItems);
+    const newExpanded = new Set(expandedSections);
     if (newExpanded.has(itemId)) {
       newExpanded.delete(itemId);
     } else {
       newExpanded.add(itemId);
     }
-    setExpandedItems(newExpanded);
+    setExpandedSections(Array.from(newExpanded));
   };
 
   const renderSidebarItem = (item: SidebarItem, level = 0) => {
-    const isExpanded = expandedItems.has(item.id);
+    const isExpanded = expandedSections.includes(item.id);
     const isActive = activeItem === item.id;
     const hasChildren = item.children && item.children.length > 0;
 
@@ -240,15 +294,26 @@ export function AppSidebar() {
             >
               <div className="flex justify-between">
                 <span>Storage Used</span>
-                <span>0 MB</span>
+                <span className={statusLoading ? 'text-muted-foreground' : 'text-foreground'}>
+                  {statusLoading ? 'Loading...' : sidebarStatus.storageUsed}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Processing</span>
-                <span className="text-muted-foreground">0 active</span>
+                <span className={`${statusLoading ? 'text-muted-foreground' : 
+                  sidebarStatus.processingCount > 0 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                  {statusLoading ? 'Loading...' : 
+                    sidebarStatus.processingCount > 0 
+                      ? `${sidebarStatus.processingCount} active`
+                      : '0 active'
+                  }
+                </span>
               </div>
               <div className="flex justify-between">
                 <span>Last Sync</span>
-                <span>Never</span>
+                <span className={statusLoading ? 'text-muted-foreground' : 'text-foreground'}>
+                  {statusLoading ? 'Loading...' : sidebarStatus.lastSync}
+                </span>
               </div>
             </div>
           </div>

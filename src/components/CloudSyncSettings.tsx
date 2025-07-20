@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLexiconStore } from '../store';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 
 interface CloudProvider {
   id: 'none' | 'icloud' | 'google_drive' | 'dropbox' | 'onedrive';
@@ -367,10 +367,11 @@ const CloudSyncSettings: React.FC = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="sync-patterns" className="block text-sm text-gray-700 dark:text-gray-300 mb-2">
                 Files to sync (patterns)
               </label>
               <textarea
+                id="sync-patterns"
                 value={settings.cloudSync.syncPatterns.join('\n')}
                 onChange={(e) => handleSyncSettingChange('syncPatterns', e.target.value.split('\n').filter(p => p.trim()))}
                 rows={4}
@@ -383,10 +384,11 @@ const CloudSyncSettings: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-gray-700 dark:text-gray-300 mb-2">
+              <label htmlFor="exclude-patterns" className="block text-sm text-gray-700 dark:text-gray-300 mb-2">
                 Files to exclude (patterns)
               </label>
               <textarea
+                id="exclude-patterns"
                 value={settings.cloudSync.excludePatterns.join('\n')}
                 onChange={(e) => handleSyncSettingChange('excludePatterns', e.target.value.split('\n').filter(p => p.trim()))}
                 rows={4}

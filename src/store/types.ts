@@ -143,8 +143,9 @@ export interface StateActions {
   updateDatasetChunks: (datasetId: string, chunks: TextChunk[]) => void;
 
   // Settings actions
-  updateSettings: (updates: Partial<AppSettings>) => void;
-  resetSettings: () => void;
+  updateSettings: (updates: Partial<AppSettings>) => Promise<void>;
+  loadSettings: () => Promise<void>;
+  resetSettings: () => Promise<void>;
 
   // Store reset
   reset: () => void;

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { ErrorHandler } from '@/utils/errorHandler';
 
 export interface SyncStatus {
   enabled: boolean;
@@ -51,8 +52,13 @@ export const useSyncManager = () => {
       const status = await invoke<SyncStatus>('get_sync_status');
       setSyncStatus(status);
     } catch (err) {
-      setError(err as string);
-      console.error('Failed to fetch sync status:', err);
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'fetchSyncStatus',
+        details: { invokeCommand: 'get_sync_status' }
+      });
     }
   }, []);
 
@@ -63,8 +69,13 @@ export const useSyncManager = () => {
       const backupsList = await invoke<BackupInfo[]>('list_backup_archives');
       setBackups(backupsList);
     } catch (err) {
-      setError(err as string);
-      console.error('Failed to fetch backups:', err);
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'fetchBackups',
+        details: { invokeCommand: 'list_backup_archives' }
+      });
     }
   }, []);
 

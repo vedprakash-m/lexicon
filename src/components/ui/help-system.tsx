@@ -181,7 +181,7 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
   const categorySections = filteredSections.filter(s => s.category === activeCategory);
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onClose={onClose}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center space-x-2">
@@ -202,15 +202,16 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
             />
           </div>
 
-          <Tabs value={activeCategory} onValueChange={setActiveCategory}>
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="getting-started">Getting Started</TabsTrigger>
-              <TabsTrigger value="features">Features</TabsTrigger>
-              <TabsTrigger value="troubleshooting">Troubleshooting</TabsTrigger>
-              <TabsTrigger value="reference">Reference</TabsTrigger>
-            </TabsList>
+          <Tabs>
+            <TabList className="grid w-full grid-cols-4 p-1 bg-muted rounded-lg">
+              <Tab className="px-3 py-2 text-sm font-medium">Getting Started</Tab>
+              <Tab className="px-3 py-2 text-sm font-medium">Features</Tab>
+              <Tab className="px-3 py-2 text-sm font-medium">Troubleshooting</Tab>
+              <Tab className="px-3 py-2 text-sm font-medium">Reference</Tab>
+            </TabList>
 
-            <TabsContent value="getting-started" className="space-y-4">
+            <TabPanels className="mt-6">
+              <TabPanel className="space-y-4">
               <div className="grid gap-4">
                 {categorySections.map(section => (
                   <Card key={section.id} className="p-6">
@@ -219,9 +220,9 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
                   </Card>
                 ))}
               </div>
-            </TabsContent>
+              </TabPanel>
 
-            <TabsContent value="features" className="space-y-4">
+              <TabPanel className="space-y-4">
               <div className="grid gap-4">
                 {categorySections.map(section => (
                   <Card key={section.id} className="p-6">
@@ -230,9 +231,9 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
                   </Card>
                 ))}
               </div>
-            </TabsContent>
+              </TabPanel>
 
-            <TabsContent value="troubleshooting" className="space-y-4">
+              <TabPanel className="space-y-4">
               <div className="grid gap-4">
                 {categorySections.map(section => (
                   <Card key={section.id} className="p-6">
@@ -241,9 +242,9 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
                   </Card>
                 ))}
               </div>
-            </TabsContent>
+              </TabPanel>
 
-            <TabsContent value="reference" className="space-y-4">
+              <TabPanel className="space-y-4">
               {/* Keyboard Shortcuts */}
               <Card className="p-6">
                 <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
@@ -272,24 +273,87 @@ export function HelpSystem({ isOpen, onClose }: HelpSystemProps) {
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex items-center space-x-3">
                       <Book className="h-4 w-4" />
-                      <span>User Guide</span>
+                      <div className="flex-1">
+                        <div className="font-medium">User Guide</div>
+                        <div className="text-sm text-muted-foreground">Complete guide to using Lexicon</div>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        // Open user guide in new tab or modal
+                        window.open('/docs/user-guide', '_blank');
+                      }}
+                    >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Keyboard className="h-4 w-4" />
+                      <div className="flex-1">
+                        <div className="font-medium">Keyboard Shortcuts</div>
+                        <div className="text-sm text-muted-foreground">Full list of keyboard shortcuts</div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        // Show keyboard shortcuts overlay - this would scroll to shortcuts tab
+                        const shortcutsElement = document.getElementById('shortcuts-tab');
+                        if (shortcutsElement) {
+                          shortcutsElement.click();
+                        }
+                      }}
+                    >
+                      <span className="text-xs">View</span>
+                    </Button>
+                  </div>
+                  
                   <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div className="flex items-center space-x-3">
                       <MessageCircle className="h-4 w-4" />
-                      <span>Community Support</span>
+                      <div className="flex-1">
+                        <div className="font-medium">Community Support</div>
+                        <div className="text-sm text-muted-foreground">Get help from the community</div>
+                      </div>
                     </div>
-                    <Button variant="ghost" size="sm">
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        window.open('https://github.com/lexicon/discussions', '_blank');
+                      }}
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <HelpCircle className="h-4 w-4" />
+                      <div className="flex-1">
+                        <div className="font-medium">API Documentation</div>
+                        <div className="text-sm text-muted-foreground">Technical reference and examples</div>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        window.open('/docs/api', '_blank');
+                      }}
+                    >
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               </Card>
-            </TabsContent>
+              </TabPanel>
+            </TabPanels>
           </Tabs>
         </div>
       </DialogContent>

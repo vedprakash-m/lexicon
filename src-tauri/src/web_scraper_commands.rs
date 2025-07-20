@@ -161,6 +161,51 @@ pub async fn cancel_scraping_job(
     }
 }
 
+/// Pause a scraping job (implemented as cancel for now)
+#[command]
+pub async fn pause_scraping_job(
+    job_id: String,
+    scraper: State<'_, WebScraperState>
+) -> Result<ScrapingResponse<bool>, String> {
+    let uuid = match Uuid::parse_str(&job_id) {
+        Ok(uuid) => uuid,
+        Err(e) => return Ok(ScrapingResponse::error(format!("Invalid job ID: {}", e))),
+    };
+
+    let mut scraper_lock = scraper.lock().await;
+    
+    match scraper_lock.cancel_job(uuid) {
+        Ok(_) => {
+            info!("Paused (cancelled) scraping job: {}", job_id);
+            Ok(ScrapingResponse::success(true))
+        }
+        Err(e) => {
+            error!("Failed to pause scraping job: {}", e);
+            Ok(ScrapingResponse::error(e.to_string()))
+        }
+    }
+}
+
+/// Resume a scraping job (not implemented - returns error)
+#[command]
+pub async fn resume_scraping_job(
+    job_id: String,
+    _scraper: State<'_, WebScraperState>
+) -> Result<ScrapingResponse<bool>, String> {
+    info!("Resume requested for job: {} (not implemented)", job_id);
+    Ok(ScrapingResponse::error("Resume functionality not yet implemented. Please restart the job.".to_string()))
+}
+
+/// Start an existing scraping job by ID (not implemented - use start_scraping_job instead)
+#[command]
+pub async fn start_existing_scraping_job(
+    job_id: String,
+    _scraper: State<'_, WebScraperState>
+) -> Result<ScrapingResponse<bool>, String> {
+    info!("Start existing job requested for: {} (not implemented)", job_id);
+    Ok(ScrapingResponse::error("Starting existing jobs not implemented. Please create a new scraping job.".to_string()))
+}
+
 /// Scrape a single URL (convenience method)
 #[command]
 pub async fn scrape_single_url(

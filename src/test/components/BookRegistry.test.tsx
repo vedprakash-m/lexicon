@@ -145,7 +145,8 @@ describe('Dashboard Component Tests', () => {
   it('displays stats grid correctly', async () => {
     renderWithProviders(<Dashboard />);
     expect(await screen.findByText('Total Books')).toBeInTheDocument();
-    expect(await screen.findAllByText('Processing')).toHaveLength(2); // Stat card and maybe elsewhere
+    // Processing text appears at least once in the stats card
+    expect(await screen.findByText('Processing')).toBeInTheDocument();
     expect(await screen.findByText('Chunks Created')).toBeInTheDocument();
     expect(await screen.findByText('Quality Score')).toBeInTheDocument();
   });

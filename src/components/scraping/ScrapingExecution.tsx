@@ -120,27 +120,41 @@ export function ScrapingExecution() {
       switch (action) {
         case 'cancel':
           await invoke('cancel_scraping_job', { jobId });
+          // Update local state immediately for better UX
+          setJobs(prev => prev.map(job => 
+            job.id === jobId ? { ...job, status: 'cancelled' as const } : job
+          ));
           break;
         case 'pause':
-          // Note: Pause functionality would need to be implemented in backend
-          console.warn('Pause functionality not yet implemented in backend');
+          await invoke('pause_scraping_job', { jobId });
+          setJobs(prev => prev.map(job => 
+            job.id === jobId ? { ...job, status: 'paused' as const } : job
+          ));
           break;
         case 'resume':
-          // Note: Resume functionality would need to be implemented in backend
-          console.warn('Resume functionality not yet implemented in backend');
+          await invoke('resume_scraping_job', { jobId });
+          setJobs(prev => prev.map(job => 
+            job.id === jobId ? { ...job, status: 'running' as const } : job
+          ));
           break;
         case 'start':
-          // This would typically be handled by the job creation process
-          console.warn('Start functionality handled during job creation');
+          await invoke('start_existing_scraping_job', { jobId });
+          setJobs(prev => prev.map(job => 
+            job.id === jobId ? { ...job, status: 'running' as const, startTime: new Date() } : job
+          ));
           break;
       }
       
-      // Refresh jobs after action
-      loadScrapingJobs();
-      loadScrapingHistory();
+      // Refresh jobs after action to get accurate backend state
+      setTimeout(() => {
+        loadScrapingJobs();
+        loadScrapingHistory();
+      }, 1000);
       
     } catch (error) {
       console.error(`Failed to ${action} scraping job:`, error);
+      // Revert optimistic update on error
+      loadScrapingJobs();
     }
   };
 

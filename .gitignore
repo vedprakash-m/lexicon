@@ -50,7 +50,7 @@ jspm_packages/
 .eslintcache
 
 # Tauri build outputs
-/src-tauri/target
+#/src-tauri/target
 /src-tauri/WixTools
 
 # Python
@@ -181,6 +181,8 @@ user_data/
 personal/
 private/
 my_*/
+.kiro
+.kiro/
 
 # Backup files
 *.bak

@@ -182,13 +182,13 @@ describe('App Integration Tests', () => {
   it('handles keyboard navigation', async () => {
     renderWithProviders(<AppContent />);
     
-    // Wait for content to load
+    // Wait for content to load and dashboard to be ready
     await waitFor(() => {
       expect(screen.getByText('Welcome back!')).toBeInTheDocument();
     });
     
-    // Focus the first interactive element
-    const addButton = screen.getByText('Add New Book');
+    // Wait for the Add New Book button to appear (indicates dashboard finished loading)
+    const addButton = await screen.findByText('Add New Book');
     addButton.focus();
     expect(document.activeElement).toBe(addButton);
   });

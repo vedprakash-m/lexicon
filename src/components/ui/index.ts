@@ -36,6 +36,9 @@ export type { HeaderProps } from './header';
 export { Tabs, TabList, Tab, TabPanels, TabPanel } from './tabs';
 export type { TabsProps, TabListProps, TabProps, TabPanelsProps, TabPanelProps } from './tabs';
 
+// Export aliases for common naming conventions
+export { TabList as TabsList, Tab as TabsTrigger, TabPanel as TabsContent } from './tabs';
+
 // Modal Components
 export {
   Dialog,

@@ -57,88 +57,96 @@ export function useDashboardData() {
       // Fetch datasets for chunk count
       const datasets = await invoke<any[]>('get_all_datasets');
       
-      // Calculate quality score (average of all completed processing)
-      const completedTexts = sourceTexts.filter(text => 
-        text.processing_status && typeof text.processing_status === 'object' && 'Completed' in text.processing_status
-      );
+      // Calculate quality score (average of all completed processing) with null checks
+      const completedTexts = sourceTexts && Array.isArray(sourceTexts) ? 
+        sourceTexts.filter(text => 
+          text.processing_status && typeof text.processing_status === 'object' && 'Completed' in text.processing_status
+        ) : [];
       
-      const qualityScore = completedTexts.length > 0 ? 
+      const qualityScore = completedTexts.length > 0 && sourceTexts && Array.isArray(sourceTexts) ? 
         Math.round((completedTexts.length / sourceTexts.length) * 100) : null;
 
-      // Calculate total chunks across all datasets
-      const totalChunks = datasets.reduce((total, dataset) => {
-        return total + (dataset.chunks ? dataset.chunks.length : 0);
-      }, 0);
+      // Calculate total chunks across all datasets with null checks
+      const totalChunks = datasets && Array.isArray(datasets) ? 
+        datasets.reduce((total, dataset) => {
+          return total + (dataset.chunks ? dataset.chunks.length : 0);
+        }, 0) : 0;
 
       // Generate recent activities from source texts and datasets
       const recentActivities: RecentActivity[] = [];
       
-      // Add recent book additions
-      sourceTexts
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-        .slice(0, 3)
-        .forEach(text => {
-          recentActivities.push({
+      // Add recent book additions (with null check)
+      if (sourceTexts && Array.isArray(sourceTexts)) {
+        sourceTexts
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 3)
+          .forEach(text => {
+            recentActivities.push({
+              id: text.id,
+              type: 'book_added',
+              title: `Added "${text.title}"`,
+              description: `New ${text.source_type.toLowerCase()} added to library`,
+              timestamp: text.created_at,
+              status: 'success'
+            });
+          });
+      }
+
+      // Add recent processing completions (with null check)
+      if (completedTexts && Array.isArray(completedTexts)) {
+        completedTexts
+          .sort((a, b) => {
+            const aTime = a.processing_status?.Completed?.completed_at || a.updated_at;
+            const bTime = b.processing_status?.Completed?.completed_at || b.updated_at;
+            return new Date(bTime).getTime() - new Date(aTime).getTime();
+          })
+          .slice(0, 2)
+          .forEach(text => {
+            recentActivities.push({
+              id: `${text.id}_processed`,
+              type: 'processing_completed',
+              title: `Processed "${text.title}"`,
+              description: `Text processing completed successfully`,
+              timestamp: text.processing_status?.Completed?.completed_at || text.updated_at,
+              status: 'success'
+            });
+          });
+      }
+
+      // Generate processing tasks from in-progress items (with null check)
+      const processingTasks: ProcessingTask[] = sourceTexts && Array.isArray(sourceTexts) ? 
+        sourceTexts
+          .filter(text => 
+            text.processing_status && 
+            typeof text.processing_status === 'object' && 
+            'InProgress' in text.processing_status
+          )
+          .map(text => ({
             id: text.id,
-            type: 'book_added',
-            title: `Added "${text.title}"`,
-            description: `New ${text.source_type.toLowerCase()} added to library`,
-            timestamp: text.created_at,
-            status: 'success'
-          });
-        });
+            title: text.title,
+            progress: text.processing_status.InProgress?.progress_percent || 0,
+            status: 'in_progress' as const,
+            current_step: text.processing_status.InProgress?.current_step || 'Processing',
+          })) : [];
 
-      // Add recent processing completions
-      completedTexts
-        .sort((a, b) => {
-          const aTime = a.processing_status?.Completed?.completed_at || a.updated_at;
-          const bTime = b.processing_status?.Completed?.completed_at || b.updated_at;
-          return new Date(bTime).getTime() - new Date(aTime).getTime();
-        })
-        .slice(0, 2)
-        .forEach(text => {
-          recentActivities.push({
-            id: `${text.id}_processed`,
-            type: 'processing_completed',
-            title: `Processed "${text.title}"`,
-            description: `Text processing completed successfully`,
-            timestamp: text.processing_status?.Completed?.completed_at || text.updated_at,
-            status: 'success'
-          });
-        });
-
-      // Generate processing tasks from in-progress items
-      const processingTasks: ProcessingTask[] = sourceTexts
-        .filter(text => 
-          text.processing_status && 
-          typeof text.processing_status === 'object' && 
-          'InProgress' in text.processing_status
-        )
-        .map(text => ({
-          id: text.id,
-          title: text.title,
-          progress: text.processing_status.InProgress?.progress_percent || 0,
-          status: 'in_progress' as const,
-          current_step: text.processing_status.InProgress?.current_step || 'Processing',
-        }));
-
-      // Count active processing tasks
+      // Count active processing tasks (with null check)
       const activeProcessing = processingTasks.length + 
-        sourceTexts.filter(text => 
-          text.processing_status && 
-          typeof text.processing_status === 'object' && 
-          'Pending' in text.processing_status
-        ).length;
+        (sourceTexts && Array.isArray(sourceTexts) ? 
+          sourceTexts.filter(text => 
+            text.processing_status && 
+            typeof text.processing_status === 'object' && 
+            'Pending' in text.processing_status
+          ).length : 0);
 
       const dashboardData: DashboardData = {
         stats: {
-          total_books: sourceTexts.length,
+          total_books: sourceTexts && Array.isArray(sourceTexts) ? sourceTexts.length : 0,
           active_processing: activeProcessing,
           chunks_created: totalChunks,
           quality_score: qualityScore,
         },
         recent_activities: recentActivities.slice(0, 5),
-        processing_tasks,
+        processing_tasks: processingTasks,
         performance,
         last_updated: new Date().toISOString(),
       };
