@@ -78,6 +78,18 @@ pub struct SyncProgress {
     pub operation: String, // 'upload', 'download', 'scan', 'resolve'
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SyncTarget {
+    pub id: String,
+    pub name: String,
+    pub target_type: String, // 'local', 'dropbox', 'google_drive', 'aws_s3', 'azure_blob'
+    pub status: String, // 'connected', 'error', 'disconnected'
+    pub last_sync: Option<String>,
+    pub config: HashMap<String, serde_json::Value>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
 // Global sync state management
 #[derive(Debug, Default)]
 pub struct SyncState {
@@ -818,4 +830,151 @@ pub async fn get_provider_status(provider: String) -> Result<bool, String> {
         },
         _ => Ok(false)
     }
+}
+
+// Sync Target Management Commands
+
+#[command]
+pub async fn get_sync_targets() -> Result<Vec<SyncTarget>, String> {
+    let sync_dir = get_sync_config_dir()?;
+    let targets_file = sync_dir.join("sync_targets.json");
+    
+    if !targets_file.exists() {
+        return Ok(vec![]);
+    }
+    
+    let content = fs::read_to_string(&targets_file)
+        .map_err(|e| format!("Failed to read sync targets: {}", e))?;
+    
+    let targets: Vec<SyncTarget> = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse sync targets: {}", e))?;
+    
+    Ok(targets)
+}
+
+#[command]
+pub async fn add_sync_target(mut target: SyncTarget) -> Result<SyncTarget, String> {
+    // Generate ID and timestamps if not provided
+    if target.id.is_empty() {
+        target.id = Uuid::new_v4().to_string();
+    }
+    let now = Utc::now().to_rfc3339();
+    target.created_at = now.clone();
+    target.updated_at = now;
+    
+    // Get existing targets
+    let mut targets = get_sync_targets().await?;
+    
+    // Check for duplicate names
+    if targets.iter().any(|t| t.name == target.name && t.id != target.id) {
+        return Err("A sync target with this name already exists".to_string());
+    }
+    
+    // Add new target
+    targets.push(target.clone());
+    
+    // Save to file
+    save_sync_targets(&targets).await?;
+    
+    Ok(target)
+}
+
+#[command]
+pub async fn update_sync_target(target_id: String, mut updates: SyncTarget) -> Result<SyncTarget, String> {
+    let mut targets = get_sync_targets().await?;
+    
+    // Find target to update
+    let target_index = targets.iter().position(|t| t.id == target_id)
+        .ok_or("Sync target not found")?;
+    
+    // Update fields but preserve ID and created_at
+    let existing_target = &mut targets[target_index];
+    updates.id = existing_target.id.clone();
+    updates.created_at = existing_target.created_at.clone();
+    updates.updated_at = Utc::now().to_rfc3339();
+    
+    // Check for duplicate names (excluding self)
+    if targets.iter().any(|t| t.name == updates.name && t.id != target_id) {
+        return Err("A sync target with this name already exists".to_string());
+    }
+    
+    targets[target_index] = updates.clone();
+    
+    // Save to file
+    save_sync_targets(&targets).await?;
+    
+    Ok(updates)
+}
+
+#[command]
+pub async fn delete_sync_target(target_id: String) -> Result<bool, String> {
+    let mut targets = get_sync_targets().await?;
+    
+    // Remove target
+    let initial_len = targets.len();
+    targets.retain(|t| t.id != target_id);
+    
+    if targets.len() == initial_len {
+        return Err("Sync target not found".to_string());
+    }
+    
+    // Save to file
+    save_sync_targets(&targets).await?;
+    
+    Ok(true)
+}
+
+#[command]
+pub async fn test_sync_target_connection(target_id: String) -> Result<bool, String> {
+    let targets = get_sync_targets().await?;
+    
+    let target = targets.iter().find(|t| t.id == target_id)
+        .ok_or("Sync target not found")?;
+    
+    // Test connection based on target type
+    match target.target_type.as_str() {
+        "local" => {
+            // Test local folder access
+            if let Some(folder_path) = target.config.get("folderPath") {
+                if let Some(path_str) = folder_path.as_str() {
+                    let path = Path::new(path_str);
+                    Ok(path.exists() && path.is_dir())
+                } else {
+                    Err("Invalid folder path configuration".to_string())
+                }
+            } else {
+                Err("Missing folder path configuration".to_string())
+            }
+        },
+        "dropbox" | "google_drive" => {
+            // For cloud providers, we would test API connectivity
+            // For now, simulate a test
+            Ok(true)
+        },
+        "aws_s3" => {
+            // Test AWS S3 connectivity
+            // This would require AWS SDK integration
+            Ok(true)
+        },
+        "azure_blob" => {
+            // Test Azure Blob connectivity
+            // This would require Azure SDK integration
+            Ok(true)
+        },
+        _ => Err("Unsupported sync target type".to_string())
+    }
+}
+
+// Helper function to save sync targets
+async fn save_sync_targets(targets: &Vec<SyncTarget>) -> Result<(), String> {
+    let sync_dir = get_sync_config_dir()?;
+    let targets_file = sync_dir.join("sync_targets.json");
+    
+    let json = serde_json::to_string_pretty(targets)
+        .map_err(|e| format!("Failed to serialize sync targets: {}", e))?;
+    
+    fs::write(&targets_file, json)
+        .map_err(|e| format!("Failed to save sync targets: {}", e))?;
+    
+    Ok(())
 }

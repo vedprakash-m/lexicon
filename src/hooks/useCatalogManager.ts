@@ -37,6 +37,13 @@ export interface BookMetadata {
   }>;
 }
 
+export interface DeleteResult {
+  success: boolean;
+  deleted_book_id: string;
+  files_deleted: string[];
+  message: string;
+}
+
 export interface CatalogFilters {
   category?: string;
   author?: string;
@@ -87,6 +94,7 @@ export interface UseCatalogManagerReturn {
   getRelatedBooks: (bookId: string) => Promise<BookMetadata[]>;
   refreshCatalog: () => Promise<void>;
   generateCatalogReport: () => Promise<string>;
+  deleteBook: (bookId: string) => Promise<DeleteResult>;
 }
 
 export const useCatalogManager = (): UseCatalogManagerReturn => {
@@ -236,6 +244,36 @@ export const useCatalogManager = (): UseCatalogManagerReturn => {
     }
   }, []);
 
+  const deleteBook = useCallback(async (bookId: string): Promise<DeleteResult> => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const result = await invoke<DeleteResult>('delete_book', {
+        bookId,
+        appDataDir: '' // The backend can determine this automatically
+      });
+      
+      // Refresh the catalog after successful deletion
+      if (result.success) {
+        await refreshCatalog();
+      }
+      
+      return result;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete book';
+      setError(errorMessage);
+      return {
+        success: false,
+        deleted_book_id: bookId,
+        files_deleted: [],
+        message: errorMessage
+      };
+    } finally {
+      setIsLoading(false);
+    }
+  }, [refreshCatalog]);
+
   // Load initial catalog data
   useEffect(() => {
     refreshCatalog();
@@ -252,6 +290,7 @@ export const useCatalogManager = (): UseCatalogManagerReturn => {
     exportCatalog,
     getRelatedBooks,
     refreshCatalog,
-    generateCatalogReport
+    generateCatalogReport,
+    deleteBook
   };
 };

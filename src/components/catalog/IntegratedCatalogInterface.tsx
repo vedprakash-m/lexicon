@@ -20,7 +20,8 @@ import {
   RefreshCw,
   Sparkles,
   FileText,
-  Plus
+  Plus,
+  Trash2
 } from 'lucide-react';
 import { useCatalogManager, BookMetadata, CatalogFilters } from '../../hooks/useCatalogManager';
 import { Button } from '../ui';
@@ -44,7 +45,8 @@ const IntegratedCatalogInterface = () => {
     exportCatalog,
     getRelatedBooks,
     refreshCatalog,
-    generateCatalogReport
+    generateCatalogReport,
+    deleteBook
   } = useCatalogManager();
 
   const [books, setBooks] = useState<BookMetadata[]>([]);
@@ -62,6 +64,8 @@ const IntegratedCatalogInterface = () => {
   const [enriching, setEnriching] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+  const [deleting, setDeleting] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<BookMetadata | null>(null);
 
   // Update books when catalog data changes
   useEffect(() => {
@@ -158,7 +162,7 @@ const IntegratedCatalogInterface = () => {
     }
   };
 
-  const handleExportCatalog = async (format: string) => {
+    const handleExportCatalog = async (format: string) => {
     setExporting(true);
     try {
       const result = await exportCatalog(format);
@@ -172,10 +176,35 @@ const IntegratedCatalogInterface = () => {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      toast.success('Export Complete', 'Catalog exported successfully');
     } catch (err) {
       console.error('Export failed:', err);
+      toast.error('Export Failed', `Export failed: ${err}`);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDeleteBook = async (book: BookMetadata) => {
+    setDeleting(prev => new Set(prev).add(book.id));
+    try {
+      const result = await deleteBook(book.id);
+      if (result.success) {
+        toast.success('Book Deleted', `Successfully deleted "${book.title}"`);
+        setShowDeleteConfirm(null);
+      } else {
+        toast.error('Delete Failed', `Failed to delete book: ${result.message}`);
+      }
+    } catch (err) {
+      console.error('Delete failed:', err);
+      toast.error('Delete Failed', `Delete failed: ${err}`);
+    } finally {
+      setDeleting(prev => {
+        const next = new Set(prev);
+        next.delete(book.id);
+        return next;
+      });
     }
   };
 
@@ -302,7 +331,7 @@ const IntegratedCatalogInterface = () => {
           bookId={book.id}
           title={book.title}
           authors={book.authors.map(a => a.name)}
-          isbn={book.isbn_13 || book.isbn_10}
+          isbn={book.isbn}
           size="medium"
           className="w-full h-full"
           showRefreshButton={false}
@@ -325,7 +354,7 @@ const IntegratedCatalogInterface = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
           <Button
             size="sm"
             variant="secondary"
@@ -340,6 +369,22 @@ const IntegratedCatalogInterface = () => {
               <RefreshCw size={14} className="animate-spin" />
             ) : (
               <Sparkles size={14} />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 w-8 p-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowDeleteConfirm(book);
+            }}
+            disabled={deleting.has(book.id)}
+          >
+            {deleting.has(book.id) ? (
+              <RefreshCw size={14} className="animate-spin" />
+            ) : (
+              <Trash2 size={14} />
             )}
           </Button>
         </div>
@@ -410,7 +455,7 @@ const IntegratedCatalogInterface = () => {
           bookId={book.id}
           title={book.title}
           authors={book.authors.map(a => a.name)}
-          isbn={book.isbn_13 || book.isbn_10}
+          isbn={book.isbn}
           size="small"
           className="w-full h-full"
           showRefreshButton={false}
@@ -453,6 +498,22 @@ const IntegratedCatalogInterface = () => {
                 <RefreshCw size={14} className="animate-spin" />
               ) : (
                 <Sparkles size={14} />
+              )}
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-red-600 hover:text-red-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowDeleteConfirm(book);
+              }}
+              disabled={deleting.has(book.id)}
+            >
+              {deleting.has(book.id) ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
               )}
             </Button>
           </div>
@@ -533,6 +594,19 @@ const IntegratedCatalogInterface = () => {
                   )}
                   Enrich
                 </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => setShowDeleteConfirm(book)}
+                  disabled={deleting.has(book.id)}
+                >
+                  {deleting.has(book.id) ? (
+                    <RefreshCw size={16} className="animate-spin mr-2" />
+                  ) : (
+                    <Trash2 size={16} className="mr-2" />
+                  )}
+                  Delete
+                </Button>
                 <button 
                   onClick={onClose}
                   className="text-gray-500 hover:text-gray-700"
@@ -550,7 +624,7 @@ const IntegratedCatalogInterface = () => {
                     bookId={book.id}
                     title={book.title}
                     authors={book.authors.map(a => a.name)}
-                    isbn={book.isbn_13 || book.isbn_10}
+                    isbn={book.isbn}
                     size="large"
                     className="w-full h-full"
                     showRefreshButton={true}
@@ -1013,6 +1087,46 @@ const IntegratedCatalogInterface = () => {
           onClose={() => setShowUploadDialog(false)}
           onUpload={handleFileUpload}
         />
+
+        {/* Delete Confirmation Dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Book</h3>
+                <p className="text-gray-600">
+                  Are you sure you want to delete "{showDeleteConfirm.title}"? This action cannot be undone and will remove all associated files.
+                </p>
+              </div>
+              <div className="flex justify-end space-x-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(null)}
+                  disabled={deleting.has(showDeleteConfirm.id)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleDeleteBook(showDeleteConfirm)}
+                  disabled={deleting.has(showDeleteConfirm.id)}
+                >
+                  {deleting.has(showDeleteConfirm.id) ? (
+                    <>
+                      <RefreshCw size={16} className="animate-spin mr-2" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} className="mr-2" />
+                      Delete
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

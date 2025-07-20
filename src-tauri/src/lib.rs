@@ -96,7 +96,8 @@ use sync_commands::{
     get_sync_status, configure_sync, start_sync, stop_sync, force_sync,
     get_backup_list, create_backup, restore_backup, delete_backup,
     verify_backup, list_backup_archives, detect_cloud_providers,
-    get_provider_status
+    get_provider_status, get_sync_targets, add_sync_target, update_sync_target,
+    delete_sync_target, test_sync_target_connection
 };
 use book_upload_commands::{
     upload_book_from_file, upload_multiple_books
@@ -359,6 +360,12 @@ pub async fn run() {
       list_backup_archives,
       detect_cloud_providers,
       get_provider_status,
+      // Sync Target Management commands
+      get_sync_targets,
+      add_sync_target,
+      update_sync_target,
+      delete_sync_target,
+      test_sync_target_connection,
       // Performance and Background Task commands
       get_performance_metrics,
       get_resource_recommendation,

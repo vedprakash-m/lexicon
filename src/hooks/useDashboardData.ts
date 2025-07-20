@@ -51,20 +51,18 @@ export function useDashboardData() {
       // Fetch performance metrics
       const performance = await invoke<PerformanceMetrics>('get_performance_metrics');
       
-      // Fetch source texts to calculate quality score
-      const sourceTexts = await invoke<any[]>('get_all_source_texts');
+      // **FIX**: Use get_all_books instead of get_all_source_texts to match catalog data
+      const books = await invoke<any[]>('get_all_books');
       
       // Fetch datasets for chunk count
       const datasets = await invoke<any[]>('get_all_datasets');
       
-      // Calculate quality score (average of all completed processing) with null checks
-      const completedTexts = sourceTexts && Array.isArray(sourceTexts) ? 
-        sourceTexts.filter(text => 
-          text.processing_status && typeof text.processing_status === 'object' && 'Completed' in text.processing_status
-        ) : [];
+      // Calculate quality score (average of all books with quality scores)
+      const booksWithQuality = books && Array.isArray(books) ? 
+        books.filter(book => book.quality_score && book.quality_score > 0) : [];
       
-      const qualityScore = completedTexts.length > 0 && sourceTexts && Array.isArray(sourceTexts) ? 
-        Math.round((completedTexts.length / sourceTexts.length) * 100) : null;
+      const qualityScore = booksWithQuality.length > 0 ? 
+        Math.round(booksWithQuality.reduce((sum, book) => sum + (book.quality_score || 0), 0) / booksWithQuality.length) : null;
 
       // Calculate total chunks across all datasets with null checks
       const totalChunks = datasets && Array.isArray(datasets) ? 
@@ -72,75 +70,34 @@ export function useDashboardData() {
           return total + (dataset.chunks ? dataset.chunks.length : 0);
         }, 0) : 0;
 
-      // Generate recent activities from source texts and datasets
+      // Generate recent activities from books (simplified for BookMetadata)
       const recentActivities: RecentActivity[] = [];
       
       // Add recent book additions (with null check)
-      if (sourceTexts && Array.isArray(sourceTexts)) {
-        sourceTexts
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 3)
-          .forEach(text => {
+      if (books && Array.isArray(books)) {
+        books
+          .slice(0, 5)
+          .forEach(book => {
             recentActivities.push({
-              id: text.id,
+              id: book.id,
               type: 'book_added',
-              title: `Added "${text.title}"`,
-              description: `New ${text.source_type.toLowerCase()} added to library`,
-              timestamp: text.created_at,
+              title: `Added "${book.title}"`,
+              description: `Book by ${book.authors?.[0]?.name || 'Unknown Author'} added to library`,
+              timestamp: new Date().toISOString(), // Default to current time since BookMetadata doesn't have created_at
               status: 'success'
             });
           });
       }
 
-      // Add recent processing completions (with null check)
-      if (completedTexts && Array.isArray(completedTexts)) {
-        completedTexts
-          .sort((a, b) => {
-            const aTime = a.processing_status?.Completed?.completed_at || a.updated_at;
-            const bTime = b.processing_status?.Completed?.completed_at || b.updated_at;
-            return new Date(bTime).getTime() - new Date(aTime).getTime();
-          })
-          .slice(0, 2)
-          .forEach(text => {
-            recentActivities.push({
-              id: `${text.id}_processed`,
-              type: 'processing_completed',
-              title: `Processed "${text.title}"`,
-              description: `Text processing completed successfully`,
-              timestamp: text.processing_status?.Completed?.completed_at || text.updated_at,
-              status: 'success'
-            });
-          });
-      }
+      // For BookMetadata, we don't have processing status, so no processing tasks
+      const processingTasks: ProcessingTask[] = [];
 
-      // Generate processing tasks from in-progress items (with null check)
-      const processingTasks: ProcessingTask[] = sourceTexts && Array.isArray(sourceTexts) ? 
-        sourceTexts
-          .filter(text => 
-            text.processing_status && 
-            typeof text.processing_status === 'object' && 
-            'InProgress' in text.processing_status
-          )
-          .map(text => ({
-            id: text.id,
-            title: text.title,
-            progress: text.processing_status.InProgress?.progress_percent || 0,
-            status: 'in_progress' as const,
-            current_step: text.processing_status.InProgress?.current_step || 'Processing',
-          })) : [];
-
-      // Count active processing tasks (with null check)
-      const activeProcessing = processingTasks.length + 
-        (sourceTexts && Array.isArray(sourceTexts) ? 
-          sourceTexts.filter(text => 
-            text.processing_status && 
-            typeof text.processing_status === 'object' && 
-            'Pending' in text.processing_status
-          ).length : 0);
+      // Count active processing tasks (none for BookMetadata)
+      const activeProcessing = 0;
 
       const dashboardData: DashboardData = {
         stats: {
-          total_books: sourceTexts && Array.isArray(sourceTexts) ? sourceTexts.length : 0,
+          total_books: books && Array.isArray(books) ? books.length : 0,
           active_processing: activeProcessing,
           chunks_created: totalChunks,
           quality_score: qualityScore,

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { Plus, Globe, FileText, Settings, Eye, Trash2, Edit, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button, Card, Badge, Dialog, DialogContent, DialogHeader, DialogTitle, Input, Label } from '../ui';
 import { SourceCreationWizard } from './SourceCreationWizard';
@@ -41,6 +42,8 @@ export function SourceConfiguration() {
   const [showRuleDialog, setShowRuleDialog] = useState(false);
   const [selectedRule, setSelectedRule] = useState<ScrapingRule | null>(null);
   const [testUrl, setTestUrl] = useState('');
+  const [isTestingUrl, setIsTestingUrl] = useState(false);
+  const [testResults, setTestResults] = useState<any>(null);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -56,6 +59,90 @@ export function SourceConfiguration() {
     if (rate >= 90) return 'text-green-600';
     if (rate >= 70) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const handleTestUrl = async () => {
+    if (!testUrl.trim()) return;
+    
+    setIsTestingUrl(true);
+    setTestResults(null);
+    
+    try {
+      // First validate the URL
+      const isValidUrl = await invoke<boolean>('validate_selector_urls', { 
+        urls: [testUrl] 
+      });
+      
+      if (!isValidUrl) {
+        throw new Error('Invalid URL format');
+      }
+
+      // Scrape the URL to test connectivity and basic structure
+      const scrapingResult = await invoke<any>('scrape_url_for_selector_testing', { 
+        url: testUrl,
+        config: {
+          followRedirects: true,
+          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        }
+      });
+
+      if (!scrapingResult.success) {
+        throw new Error(scrapingResult.error || 'Failed to scrape URL');
+      }
+
+      // Test which rules match this URL
+      const matchingRules = rules.filter(rule => {
+        return rule.domain_patterns.some(pattern => {
+          try {
+            const regex = new RegExp(pattern);
+            return regex.test(testUrl);
+          } catch {
+            return testUrl.includes(pattern);
+          }
+        });
+      });
+
+      // If we have matching rules, test a basic selector from the first one
+      let selectorTestResult = null;
+      if (matchingRules.length > 0 && Object.keys(matchingRules[0].selectors).length > 0) {
+        const firstRule = matchingRules[0];
+        const firstSelectorKey = Object.keys(firstRule.selectors)[0];
+        const firstSelector = firstRule.selectors[firstSelectorKey];
+        
+        if (firstSelector?.selector) {
+          try {
+            selectorTestResult = await invoke<any>('test_css_selector', {
+              url: testUrl,
+              selector: firstSelector.selector,
+              field: firstSelectorKey
+            });
+          } catch (err) {
+            console.warn('Selector test failed:', err);
+          }
+        }
+      }
+
+      setTestResults({
+        url: testUrl,
+        success: true,
+        accessible: true,
+        contentLength: scrapingResult.content?.length || 0,
+        matchingRules: matchingRules.map(rule => rule.name),
+        selectorTest: selectorTestResult
+      });
+
+    } catch (error) {
+      console.error('URL test failed:', error);
+      setTestResults({
+        url: testUrl,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        accessible: false,
+        matchingRules: []
+      });
+    } finally {
+      setIsTestingUrl(false);
+    }
   };
 
   return (
@@ -187,12 +274,91 @@ export function SourceConfiguration() {
                 onChange={(e) => setTestUrl(e.target.value)}
                 className="flex-1"
               />
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleTestUrl} disabled={!testUrl.trim() || isTestingUrl}>
                 <Eye className="h-4 w-4 mr-2" />
-                Test URL
+                {isTestingUrl ? 'Testing...' : 'Test URL'}
               </Button>
             </div>
           </Card>
+
+          {/* Test Results */}
+          {testResults && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3">Test Results</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">URL Accessibility:</span>
+                  <div className="flex items-center space-x-2">
+                    {testResults.success ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <span className="text-sm text-green-600">Accessible</span>
+                      </>
+                    ) : (
+                      <>
+                        <AlertCircle className="h-4 w-4 text-red-500" />
+                        <span className="text-sm text-red-600">Failed</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                {testResults.success && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Content Length:</span>
+                      <span className="text-sm">{testResults.contentLength.toLocaleString()} characters</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Matching Rules:</span>
+                      <span className="text-sm">
+                        {testResults.matchingRules.length > 0 
+                          ? testResults.matchingRules.join(', ') 
+                          : 'No matching rules'}
+                      </span>
+                    </div>
+                    
+                    {testResults.selectorTest && (
+                      <div className="space-y-2">
+                        <span className="text-sm text-muted-foreground">Sample Extraction:</span>
+                        <div className="bg-muted p-3 rounded-lg">
+                          {testResults.selectorTest.success ? (
+                            <div className="space-y-1">
+                              <div className="flex items-center space-x-2">
+                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                <span className="text-xs text-green-600">Selector found content</span>
+                              </div>
+                              <code className="text-xs block mt-1">
+                                {testResults.selectorTest.content?.substring(0, 100)}
+                                {testResults.selectorTest.content?.length > 100 ? '...' : ''}
+                              </code>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <AlertCircle className="h-3 w-3 text-red-500" />
+                              <span className="text-xs text-red-600">
+                                {testResults.selectorTest.error || 'Selector did not find content'}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+                
+                {!testResults.success && testResults.error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="h-4 w-4 text-red-500" />
+                      <span className="text-sm text-red-600">Error: {testResults.error}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+          )}
 
           {/* Rules Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

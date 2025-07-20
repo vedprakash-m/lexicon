@@ -38,9 +38,21 @@ export interface BackupConfig {
   encrypt: boolean;
 }
 
+export interface SyncTarget {
+  id: string;
+  name: string;
+  target_type: 'local' | 'dropbox' | 'google_drive' | 'aws_s3' | 'azure_blob';
+  status: 'connected' | 'error' | 'disconnected';
+  last_sync?: string;
+  config: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
 export const useSyncManager = () => {
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
+  const [syncTargets, setSyncTargets] = useState<SyncTarget[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isOperationInProgress, setIsOperationInProgress] = useState(false);
@@ -79,12 +91,29 @@ export const useSyncManager = () => {
     }
   }, []);
 
+  // Fetch sync targets list
+  const fetchSyncTargets = useCallback(async () => {
+    try {
+      setError(null);
+      const targetsList = await invoke<SyncTarget[]>('get_sync_targets');
+      setSyncTargets(targetsList);
+    } catch (err) {
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'fetchSyncTargets',
+        details: { invokeCommand: 'get_sync_targets' }
+      });
+    }
+  }, []);
+
   // Initialize data
   const loadData = useCallback(async () => {
     setIsLoading(true);
-    await Promise.all([fetchSyncStatus(), fetchBackups()]);
+    await Promise.all([fetchSyncStatus(), fetchBackups(), fetchSyncTargets()]);
     setIsLoading(false);
-  }, [fetchSyncStatus, fetchBackups]);
+  }, [fetchSyncStatus, fetchBackups, fetchSyncTargets]);
 
   // Configure sync
   const configureSync = useCallback(async (config: SyncConfig): Promise<boolean> => {
@@ -161,23 +190,106 @@ export const useSyncManager = () => {
   }, [fetchBackups]);
 
   // Restore backup
-  const restoreBackup = useCallback(async (backupId: string): Promise<boolean> => {
+  const restoreBackup = useCallback(async (archiveId: string): Promise<{ success: boolean; message: string }> => {
     try {
-      setIsOperationInProgress(true);
       setError(null);
-      const success = await invoke<boolean>('restore_backup', { backupId });
-      if (success) {
+      const result = await invoke<{ success: boolean; message: string }>('restore_backup', { archiveId });
+      if (result.success) {
         await loadData(); // Refresh all data after restore
       }
-      return success;
+      return result;
     } catch (err) {
-      setError(err as string);
-      console.error('Failed to restore backup:', err);
-      return false;
-    } finally {
-      setIsOperationInProgress(false);
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'restoreBackup',
+        details: { archiveId, invokeCommand: 'restore_backup' }
+      });
+      return { success: false, message: errorMessage };
     }
   }, [loadData]);
+
+  // Add new sync target
+  const addSyncTarget = useCallback(async (target: Omit<SyncTarget, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; message: string }> => {
+    try {
+      setError(null);
+      const result = await invoke<{ success: boolean; message: string }>('add_sync_target', { target });
+      if (result.success) {
+        await fetchSyncTargets(); // Refresh targets list
+      }
+      return result;
+    } catch (err) {
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'addSyncTarget',
+        details: { target, invokeCommand: 'add_sync_target' }
+      });
+      return { success: false, message: errorMessage };
+    }
+  }, [fetchSyncTargets]);
+
+  // Update existing sync target
+  const updateSyncTarget = useCallback(async (target: SyncTarget): Promise<{ success: boolean; message: string }> => {
+    try {
+      setError(null);
+      const result = await invoke<{ success: boolean; message: string }>('update_sync_target', { target });
+      if (result.success) {
+        await fetchSyncTargets(); // Refresh targets list
+      }
+      return result;
+    } catch (err) {
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'updateSyncTarget',
+        details: { target, invokeCommand: 'update_sync_target' }
+      });
+      return { success: false, message: errorMessage };
+    }
+  }, [fetchSyncTargets]);
+
+  // Delete sync target
+  const deleteSyncTarget = useCallback(async (targetId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      setError(null);
+      const result = await invoke<{ success: boolean; message: string }>('delete_sync_target', { targetId });
+      if (result.success) {
+        await fetchSyncTargets(); // Refresh targets list
+      }
+      return result;
+    } catch (err) {
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'deleteSyncTarget',
+        details: { targetId, invokeCommand: 'delete_sync_target' }
+      });
+      return { success: false, message: errorMessage };
+    }
+  }, [fetchSyncTargets]);
+
+  // Test sync target connection
+  const testSyncTargetConnection = useCallback(async (targetId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      setError(null);
+      const result = await invoke<{ success: boolean; message: string }>('test_sync_target_connection', { targetId });
+      return result;
+    } catch (err) {
+      const errorMessage = err as string;
+      setError(errorMessage);
+      ErrorHandler.logError(err as Error, {
+        component: 'SyncManager',
+        operation: 'testSyncTargetConnection',
+        details: { targetId, invokeCommand: 'test_sync_target_connection' }
+      });
+      return { success: false, message: errorMessage };
+    }
+  }, []);
 
   // Delete backup
   const deleteBackup = useCallback(async (backupId: string): Promise<boolean> => {
@@ -253,6 +365,7 @@ export const useSyncManager = () => {
     // State
     syncStatus,
     backups,
+    syncTargets,
     isLoading,
     error,
     isOperationInProgress,
@@ -267,6 +380,11 @@ export const useSyncManager = () => {
     verifyBackup,
     configureBackup,
     refreshData,
+    fetchSyncTargets,
+    addSyncTarget,
+    updateSyncTarget,
+    deleteSyncTarget,
+    testSyncTargetConnection,
     
     // Utilities
     clearError: () => setError(null),

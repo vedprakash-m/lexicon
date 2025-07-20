@@ -58,10 +58,11 @@ function App() {
                         <Route path="/chunking" element={<AdvancedChunking />} />
                         <Route path="/export" element={<ExportManager chunks={[]} />} />
                         <Route path="/sync" element={<SimpleSyncBackupManager />} />
+                        <Route path="/backups" element={<SimpleSyncBackupManager />} />
                         <Route path="/performance" element={<PerformanceDashboard />} />
                         {/* <Route path="/cache" element={<CacheManager />} /> */}
                         <Route path="/showcase" element={<ComponentShowcase />} />
-                        <Route path="*" element={<div className="p-6"><h1>Route not found: {window.location.pathname}</h1><p>Available routes:</p><ul><li>/</li><li>/projects</li><li>/projects/:projectId</li></ul></div>} />
+                        <Route path="*" element={<div className="p-6"><h1>Route not found: {window.location.pathname}</h1><p>Available routes:</p><ul><li>/</li><li>/library</li><li>/projects</li><li>/projects/:projectId</li><li>/sources</li><li>/scraping</li><li>/batch</li><li>/chunking</li><li>/export</li><li>/sync</li><li>/performance</li><li>/showcase</li></ul></div>} />
                       </Routes>
                     </OnboardingManager>
                   </AppLayout>
