@@ -27,6 +27,7 @@ import {
 import { Button } from '../ui';
 import { useSidebarStatus } from '@/hooks/useSidebarStatus';
 import { useCatalogManager } from '@/hooks/useCatalogManager';
+import { useNavigationPreloader } from '../ui/route-preloader';
 import { cn } from '../../lib/utils';
 
 interface SidebarItem {
@@ -45,6 +46,7 @@ export const AppSidebar: React.FC = () => {
   
   const { status: sidebarStatus, loading: statusLoading } = useSidebarStatus();
   const { books, stats, isLoading } = useCatalogManager();
+  const { preloadOnHover } = useNavigationPreloader();
 
   // Calculate book counts from catalog data
   const bookCounts = useMemo(() => {
@@ -209,10 +211,12 @@ export const AppSidebar: React.FC = () => {
               toggleExpanded(item.id);
             }
           }}
+          {...(item.route ? preloadOnHover(item.route) : {})}
           role={hasChildren ? "treeitem" : "link"}
           aria-expanded={hasChildren ? isExpanded : undefined}
           aria-current={isActive ? "page" : undefined}
           ariaLabel={`${item.label}${item.count ? `, ${item.count} items` : ''}`}
+          data-preload-route={item.route}
         >
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center space-x-3">

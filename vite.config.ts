@@ -1,9 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "path";
+import type { OutputOptions } from "rollup";
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(() => ({
   plugins: [react()],
   
   // Tauri expects a specific base path for assets
@@ -17,30 +18,33 @@ export default defineConfig(async () => ({
   
   build: {
     rollupOptions: {
+      // Let Vite handle dynamic imports automatically for code splitting
+      // Manual chunks for vendor libraries only
       output: {
         manualChunks: {
-          // Vendor chunks
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'ui-vendor': ['@headlessui/react', '@heroicons/react'],
-          // Feature chunks
-          'catalog': [
-            './src/components/catalog/EnhancedCatalogInterface.tsx',
-            './src/components/catalog/IntegratedCatalogInterface.tsx',
-          ],
-          'processing': [
-            './src/components/batch/BatchProcessing.tsx',
-            './src/components/chunking/AdvancedChunking.tsx',
-          ],
+          'react-vendor': ['react', 'react-dom'],
+          'router-vendor': ['react-router-dom'],
+          'ui-vendor': ['@headlessui/react', '@heroicons/react', '@radix-ui/react-tooltip', 'lucide-react'],
+          'state-vendor': ['zustand', '@tanstack/react-query', 'immer'],
+          'utility-vendor': ['date-fns', 'uuid', 'clsx', 'tailwind-merge', 'class-variance-authority'],
         },
       },
     },
     target: 'esnext',
-    minify: 'terser',
+    minify: 'terser' as const,
     terserOptions: {
       compress: {
         drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug'],
+        passes: 2,
+      },
+      mangle: {
+        safari10: true,
       },
     },
+    chunkSizeWarningLimit: 1000,
+    reportCompressedSize: true,
   },
   
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lexicon - Offline</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 500px;
+      margin: 0 auto;
+    }
+    
+    .icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.8;
+    }
+    
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+    
+    p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+    
+    .features {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 12px;
+      padding: 2rem;
+      margin: 2rem 0;
+      text-align: left;
+    }
+    
+    .features h2 {
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .feature-list li {
+      padding: 0.5rem 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .feature-list li::before {
+      content: "✓";
+      margin-right: 0.75rem;
+      color: #4ade80;
+      font-weight: bold;
+    }
+    
+    .actions {
+      margin-top: 2rem;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .btn-primary {
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }
+    
+    .btn-primary:hover {
+      background: #4338ca;
+      border-color: #4338ca;
+    }
+    
+    .status {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.8; }
+      50% { opacity: 1; }
+    }
+    
+    @media (max-width: 600px) {
+      h1 { font-size: 2rem; }
+      p { font-size: 1rem; }
+      .features { padding: 1.5rem; margin: 1.5rem 0; }
+      .btn { display: block; margin: 10px 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon pulse">📚</div>
+    <h1>You're Offline</h1>
+    <p>Lexicon is currently offline, but some features are still available.</p>
+    
+    <div class="features">
+      <h2>Available Offline</h2>
+      <ul class="feature-list">
+        <li>Browse cached library catalog</li>
+        <li>View previously loaded book details</li>
+        <li>Access processing history</li>
+        <li>Review export configurations</li>
+        <li>Queue processing jobs for sync</li>
+      </ul>
+    </div>
+    
+    <div class="actions">
+      <a href="/" class="btn btn-primary" onclick="retryConnection()">
+        Retry Connection
+      </a>
+      <a href="/library" class="btn">
+        Browse Offline Catalog
+      </a>
+    </div>
+    
+    <div class="status">
+      <div id="connection-status">
+        <span id="status-indicator">🔴</span>
+        <span id="status-text">No internet connection</span>
+      </div>
+      <div style="margin-top: 10px; font-size: 0.8rem; opacity: 0.7;">
+        Lexicon will automatically reconnect when your internet is restored.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Connection status monitoring
+    function updateConnectionStatus() {
+      const indicator = document.getElementById('status-indicator');
+      const text = document.getElementById('status-text');
+      
+      if (navigator.onLine) {
+        indicator.textContent = '🟢';
+        text.textContent = 'Connection restored - Redirecting...';
+        
+        // Redirect to main app after a brief delay
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1500);
+      } else {
+        indicator.textContent = '🔴';
+        text.textContent = 'No internet connection';
+      }
+    }
+    
+    // Retry connection
+    function retryConnection() {
+      updateConnectionStatus();
+      
+      if (!navigator.onLine) {
+        // Show feedback for offline retry
+        const text = document.getElementById('status-text');
+        text.textContent = 'Still offline - Please check your connection';
+        
+        setTimeout(() => {
+          updateConnectionStatus();
+        }, 3000);
+      }
+    }
+    
+    // Listen for connection changes
+    window.addEventListener('online', updateConnectionStatus);
+    window.addEventListener('offline', updateConnectionStatus);
+    
+    // Initial status check
+    updateConnectionStatus();
+    
+    // Periodic connection check
+    setInterval(() => {
+      if (navigator.onLine) {
+        // Try to reach the server
+        fetch('/', { method: 'HEAD', cache: 'no-cache' })
+          .then(() => {
+            window.location.href = '/';
+          })
+          .catch(() => {
+            // Server not reachable yet
+          });
+      }
+    }, 5000);
+    
+    // Service worker communication
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        // Request cache update when back online
+        window.addEventListener('online', () => {
+          registration.active?.postMessage({
+            type: 'CACHE_UPDATE',
+            urls: ['/', '/api/catalog', '/api/stats']
+          });
+        });
+      });
+    }
+  </script>
+</body>
+</html>

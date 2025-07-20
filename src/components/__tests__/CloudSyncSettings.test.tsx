@@ -37,8 +37,10 @@ describe('CloudSyncSettings', () => {
     (useLexiconStore as any).mockReturnValue(mockStore);
   });
 
-  it('renders all cloud provider options', () => {
-    render(<CloudSyncSettings />);
+  it('renders all cloud provider options', async () => {
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     expect(screen.getByText('Disabled')).toBeInTheDocument();
     expect(screen.getByText('iCloud Drive')).toBeInTheDocument();
@@ -47,8 +49,10 @@ describe('CloudSyncSettings', () => {
     expect(screen.getByText('Microsoft OneDrive')).toBeInTheDocument();
   });
 
-  it('shows correct provider as selected', () => {
-    render(<CloudSyncSettings />);
+  it('shows correct provider as selected', async () => {
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     // Check that a provider is selected (could be any provider based on store state)
     const selectedBadge = screen.getByText('Selected');
@@ -87,7 +91,7 @@ describe('CloudSyncSettings', () => {
     });
   });
 
-  it('shows sync settings when provider is not none', () => {
+  it('shows sync settings when provider is not none', async () => {
     const storeWithProvider = {
       ...mockStore,
       settings: {
@@ -101,7 +105,9 @@ describe('CloudSyncSettings', () => {
     };
     (useLexiconStore as any).mockReturnValue(storeWithProvider);
 
-    render(<CloudSyncSettings />);
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     expect(screen.getByText('Sync Settings')).toBeInTheDocument();
     expect(screen.getByText('Automatic synchronization')).toBeInTheDocument();
@@ -123,7 +129,9 @@ describe('CloudSyncSettings', () => {
     };
     (useLexiconStore as any).mockReturnValue(storeWithProvider);
 
-    render(<CloudSyncSettings />);
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     const autoSyncCheckbox = screen.getByLabelText('Automatic synchronization');
     
@@ -134,7 +142,7 @@ describe('CloudSyncSettings', () => {
     expect(mockStore.updateSettings).toHaveBeenCalled();
   });
 
-  it('updates sync interval', () => {
+  it('updates sync interval', async () => {
     const storeWithProvider = {
       ...mockStore,
       settings: {
@@ -148,10 +156,15 @@ describe('CloudSyncSettings', () => {
     };
     (useLexiconStore as any).mockReturnValue(storeWithProvider);
 
-    render(<CloudSyncSettings />);
+    await act(async () => {
+      render(<CloudSyncSettings />);
+    });
     
     const intervalSelect = screen.getByDisplayValue('5 minutes');
-    fireEvent.change(intervalSelect, { target: { value: '15' } });
+    
+    await act(async () => {
+      fireEvent.change(intervalSelect, { target: { value: '15' } });
+    });
     
     expect(mockStore.updateSettings).toHaveBeenCalled();
   });

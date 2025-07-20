@@ -23,6 +23,9 @@ export type { SelectProps, SelectOption } from './select';
 
 // Layout Components
 export { Card } from './card';
+export { Skeleton, SkeletonCard, SkeletonTable, SkeletonList } from './skeleton';
+export type { SkeletonProps } from './skeleton';
+
 export { Badge } from './badge';
 export { Progress } from './progress';
 
