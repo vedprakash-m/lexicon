@@ -45,16 +45,19 @@ Lexicon combines the best of modern technologies in a production-ready architect
 Since this app is not code-signed with an Apple Developer certificate, macOS will show a security warning on first launch:
 
 **If you see "Lexicon is damaged and can't be opened":**
-1. **Don't** move the app to Trash
-2. **Right-click** (or Control+click) on the Lexicon app in Applications
-3. Select **"Open"** from the context menu  
-4. Click **"Open"** in the security dialog
-5. The app will launch and be trusted for future use
+1. Open **Terminal** (Applications → Utilities)
+2. Run this command to remove quarantine:
+   ```bash
+   sudo xattr -rd com.apple.quarantine /Applications/Lexicon.app
+   ```
+3. Enter your Mac password when prompted
+4. Launch Lexicon normally - it should now work
 
-**Alternative method:**
-1. Go to **System Preferences** → **Security & Privacy** → **General**
-2. Click **"Open Anyway"** next to the Lexicon message
-3. Click **"Open"** in the confirmation dialog
+**Alternative methods:**
+- **Right-click** on Lexicon.app → Select "Open" → Click "Open" in dialog
+- **System Preferences** → Security & Privacy → General → Click "Open Anyway"
+
+(See the [Troubleshooting section](#%EF%B8%8F-troubleshooting) below for detailed instructions)
 
 No additional setup required - the app includes all necessary dependencies!
 
@@ -207,17 +210,40 @@ npm run storybook        # Component development and testing
 
 This is a common macOS security message for unsigned applications. **The app is not actually damaged.**
 
-**Solution 1 - Right-click to Open:**
+**Solution 1 - Remove Quarantine Attribute (Most Effective):**
+1. Open **Terminal** (found in Applications → Utilities)
+2. Run this command (copy and paste exactly):
+   ```bash
+   sudo xattr -rd com.apple.quarantine /Applications/Lexicon.app
+   ```
+3. Enter your Mac password when prompted
+4. Try opening Lexicon normally - it should now work
+
+**Solution 2 - Right-click to Open:**
 1. Right-click (or Control+click) on Lexicon.app in Applications
 2. Select "Open" from the context menu
 3. Click "Open" in the security dialog
-4. App will launch and be trusted permanently
+4. If this still shows the "damaged" error, use Solution 1 above
 
-**Solution 2 - Security & Privacy Settings:**
+**Solution 3 - Security & Privacy Settings:**
 1. Try to open the app normally (to trigger the security message)
 2. Go to System Preferences → Security & Privacy → General
 3. Click "Open Anyway" next to the Lexicon message
 4. Click "Open" in the confirmation dialog
+5. If no "Open Anyway" button appears, use Solution 1 above
+
+**Solution 4 - Automated Fix Script:**
+Download and run our automated fix script:
+1. Download: [fix-lexicon-macos.sh](https://raw.githubusercontent.com/vedprakash-m/lexicon/main/scripts/fix-lexicon-macos.sh)
+2. Open Terminal and run: `chmod +x ~/Downloads/fix-lexicon-macos.sh`
+3. Run the script: `~/Downloads/fix-lexicon-macos.sh`
+4. Enter your password when prompted
+
+**Solution 5 - Download from Different Location:**
+If the above don't work, the download may be corrupted:
+1. Delete the current Lexicon.app from Applications
+2. Re-download from GitHub releases page
+3. Use Solution 1 immediately after downloading
 
 **Why this happens:**
 - The app is not code-signed with an Apple Developer certificate
