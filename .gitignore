@@ -54,8 +54,21 @@ jspm_packages/
 # Optional eslint cache
 .eslintcache
 
-# Tauri build outputs (allow selective tracking of final builds)
-/src-tauri/target
+# Tauri build outputs - ignore most but allow final distribution files
+src-tauri/target/debug/
+src-tauri/target/release/deps/
+src-tauri/target/release/build/
+src-tauri/target/release/incremental/
+src-tauri/target/release/.fingerprint/
+src-tauri/target/release/lexicon
+src-tauri/target/release/lexicon.d
+src-tauri/target/.rustc_info.json
+src-tauri/target/CACHEDIR.TAG
+# Final distribution files - only essential release artifacts
+src-tauri/target/release/bundle/share/
+src-tauri/target/release/bundle/dmg/bundle_dmg.sh
+src-tauri/target/release/bundle/dmg/icon.icns
+# These are tracked: .app bundle and .dmg installer
 /src-tauri/WixTools
 /src-tauri/uploads
 
