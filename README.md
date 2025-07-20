@@ -37,9 +37,24 @@ Lexicon combines the best of modern technologies in a production-ready architect
 1. Download the latest release from the [Releases page](https://github.com/vedprakash-m/lexicon/releases)
 2. Choose the appropriate installer:
    - **Lexicon_1.0.0_aarch64.dmg** - For Apple Silicon Macs (M1/M2/M3)
-   - **Lexicon.app** - Direct app bundle for manual installation
-3. Double-click the `.dmg` file and drag Lexicon to your Applications folder
-4. Launch Lexicon from your Applications folder or Launchpad
+   - **Lexicon.app.zip** - Direct app bundle for manual installation
+3. **For DMG**: Double-click the `.dmg` file and drag Lexicon to your Applications folder
+4. **For ZIP**: Extract the zip file and drag Lexicon.app to your Applications folder
+
+#### ⚠️ Important: First Launch Instructions
+Since this app is not code-signed with an Apple Developer certificate, macOS will show a security warning on first launch:
+
+**If you see "Lexicon is damaged and can't be opened":**
+1. **Don't** move the app to Trash
+2. **Right-click** (or Control+click) on the Lexicon app in Applications
+3. Select **"Open"** from the context menu  
+4. Click **"Open"** in the security dialog
+5. The app will launch and be trusted for future use
+
+**Alternative method:**
+1. Go to **System Preferences** → **Security & Privacy** → **General**
+2. Click **"Open Anyway"** next to the Lexicon message
+3. Click **"Open"** in the confirmation dialog
 
 No additional setup required - the app includes all necessary dependencies!
 
@@ -186,7 +201,41 @@ npm run storybook        # Component development and testing
 - **[Implementation Tasks](docs/lexicon-tasks.md)**: Development roadmap and completion status
 - **[Project Metadata](docs/metadata.md)**: Comprehensive implementation status and technical details
 
-## 🔧 System Requirements
+## �️ Troubleshooting
+
+### "Lexicon is damaged and can't be opened" Error
+
+This is a common macOS security message for unsigned applications. **The app is not actually damaged.**
+
+**Solution 1 - Right-click to Open:**
+1. Right-click (or Control+click) on Lexicon.app in Applications
+2. Select "Open" from the context menu
+3. Click "Open" in the security dialog
+4. App will launch and be trusted permanently
+
+**Solution 2 - Security & Privacy Settings:**
+1. Try to open the app normally (to trigger the security message)
+2. Go to System Preferences → Security & Privacy → General
+3. Click "Open Anyway" next to the Lexicon message
+4. Click "Open" in the confirmation dialog
+
+**Why this happens:**
+- The app is not code-signed with an Apple Developer certificate
+- macOS Gatekeeper blocks unsigned apps by default
+- This is a security feature, not an actual problem with the app
+
+### Other Common Issues
+
+**App won't start:**
+- Ensure you're running macOS 10.15 (Catalina) or later
+- Check that you have sufficient disk space (100MB minimum)
+- Try restarting your Mac and opening the app again
+
+**Python engine errors:**
+- The app includes all Python dependencies - no separate installation needed
+- If you see Python-related errors, try reinstalling the app
+
+## �🔧 System Requirements
 
 ### Minimum Requirements
 - **OS**: macOS 10.15 (Catalina) or later
