@@ -18,6 +18,7 @@ mod performance_commands;
 mod cache_manager;
 mod cache_commands;
 mod batch_commands;
+mod windows_compat;
 mod schema_version;
 mod migration;
 mod backup_manager;

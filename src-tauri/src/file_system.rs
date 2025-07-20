@@ -70,9 +70,7 @@ pub struct FileSystemConfig {
 impl Default for FileSystemConfig {
     fn default() -> Self {
         Self {
-            app_data_dir: dirs::data_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("com.lexicon.dataset-tool"),
+            app_data_dir: crate::windows_compat::get_app_data_dir(),
             enable_auto_backup: true,
             max_backup_files: 10,
             min_free_space: 1024 * 1024 * 100, // 100MB
