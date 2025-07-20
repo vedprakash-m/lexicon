@@ -6,11 +6,16 @@
 # Testing
 /coverage
 
-# Production builds
+# Production builds and development outputs
 /build
 /dist
 /dist-ssr
+/test-dist
 *.local
+
+# Storybook outputs
+storybook-static/
+*storybook.log
 
 # Environment variables
 .env
@@ -49,9 +54,10 @@ jspm_packages/
 # Optional eslint cache
 .eslintcache
 
-# Tauri build outputs
-#/src-tauri/target
+# Tauri build outputs (allow selective tracking of final builds)
+/src-tauri/target
 /src-tauri/WixTools
+/src-tauri/uploads
 
 # Python
 __pycache__/
@@ -106,8 +112,10 @@ python-engine/venv/
 # PyCharm
 .idea/
 
-# VS Code
-.vscode/
+# VS Code (allow workspace settings but ignore user settings)
+.vscode/settings.json
+.vscode/launch.json
+.vscode/extensions.json
 
 # macOS
 .DS_Store
@@ -200,4 +208,14 @@ Thumbs.db
 ehthumbs.db
 
 *storybook.log
-storybook-static
+storybook-static/
+
+# Testing outputs and coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
