@@ -76,7 +76,8 @@ describe('useLexiconStore', () => {
     const sourceText = state.sourceTexts[sourceTextIds[0]]
     expect(sourceText.title).toBe('Bhagavad Gita')
     expect(sourceText.author).toBe('Krishna')
-    expect(sourceText.content).toBe('Chapter 1...')
+    expect(sourceText.sourceType).toBe('scripture')
+    expect(sourceText.processingStatus).toBe('pending')
     expect(sourceText.id).toBeDefined()
     expect(sourceText.createdAt).toBeDefined()
     expect(sourceText.updatedAt).toBeDefined()
@@ -87,8 +88,12 @@ describe('useLexiconStore', () => {
       title: 'Bhagavad Gita',
       author: 'Krishna',
       language: 'en',
-      content: 'Chapter 1...',
-      metadata: {}
+      sourceType: 'scripture' as const,
+      processingStatus: 'pending' as const,
+      metadata: {
+        tags: [],
+        customFields: {}
+      }
     }
 
     let sourceTextId: string
@@ -100,14 +105,14 @@ describe('useLexiconStore', () => {
       
       useLexiconStore.getState().updateSourceText(sourceTextId, {
         title: 'Bhagavad Gita (Updated)',
-        content: 'Updated content...'
+        processingStatus: 'completed' as const
       })
     })
 
     const state = useLexiconStore.getState()
     const sourceText = state.sourceTexts[sourceTextId]
     expect(sourceText.title).toBe('Bhagavad Gita (Updated)')
-    expect(sourceText.content).toBe('Updated content...')
+    expect(sourceText.processingStatus).toBe('completed')
     expect(sourceText.author).toBe('Krishna') // Unchanged
   })
 
@@ -116,8 +121,12 @@ describe('useLexiconStore', () => {
       title: 'Test Book',
       author: 'Test Author',
       language: 'en',
-      content: 'Test content',
-      metadata: {}
+      sourceType: 'book' as const,
+      processingStatus: 'pending' as const,
+      metadata: {
+        tags: [],
+        customFields: {}
+      }
     }
 
     let sourceTextId: string
@@ -140,8 +149,12 @@ describe('useLexiconStore', () => {
       title: 'Test Book',
       author: 'Test Author',
       language: 'en',
-      content: 'Test content',
-      metadata: {}
+      sourceType: 'book' as const,
+      processingStatus: 'pending' as const,
+      metadata: {
+        tags: [],
+        customFields: {}
+      }
     }
 
     let sourceTextId: string
@@ -162,17 +175,25 @@ describe('useLexiconStore', () => {
     const datasetData = {
       name: 'Structured Scriptures Dataset',
       description: 'Collection of classical wisdom',
-      sourceTextIds: ['source1', 'source2'],
-      chunkingStrategy: {
-        type: 'verse' as const,
-        maxTokens: 256,
-        overlap: 25,
-        preserveStructure: true
-      },
-      exportConfig: {
-        format: 'json' as const,
-        includeMetadata: true,
-        weightingStrategy: 'balanced' as const
+      sourceTexts: ['source1', 'source2'],
+      chunks: [],
+      status: 'draft' as const,
+      metadata: {
+        totalChunks: 0,
+        totalWords: 0,
+        languages: ['en'],
+        chunkingStrategy: {
+          type: 'semantic' as const,
+          maxTokens: 256,
+          overlap: 25,
+          preserveStructure: true
+        },
+        exportConfig: {
+          format: 'json' as const,
+          includeMetadata: true,
+          weightingStrategy: 'balanced' as const
+        },
+        customFields: {}
       }
     }
 
@@ -186,8 +207,8 @@ describe('useLexiconStore', () => {
     
     const dataset = state.datasets[datasetIds[0]]
     expect(dataset.name).toBe('Structured Scriptures Dataset')
-    expect(dataset.sourceTextIds).toEqual(['source1', 'source2'])
-    expect(dataset.chunkingStrategy.type).toBe('verse')
+    expect(dataset.sourceTexts).toEqual(['source1', 'source2'])
+    expect(dataset.metadata.chunkingStrategy.type).toBe('semantic')
   })
 
   it('updates settings correctly', async () => {
