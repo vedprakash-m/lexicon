@@ -115,3 +115,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, className }) => {
 };
 
 export { Tabs, TabList, Tab, TabPanels, TabPanel };
+
+// Additional exports for compatibility with different APIs
+export const TabsContent = TabPanel;
+export const TabsList = TabList;
+export const TabsTrigger = Tab;

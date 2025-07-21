@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Grid, List, Filter, Sort, Eye, Edit, Download } from 'lucide-react';
+import { Search, Grid, List, Filter, ArrowUpDown, Eye, Edit, Download } from 'lucide-react';
 
 interface Book {
   id: string;

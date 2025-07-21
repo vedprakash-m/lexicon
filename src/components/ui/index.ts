@@ -15,6 +15,9 @@ export type { InputProps } from './input';
 export { Label } from './label';
 export type { LabelProps } from './label';
 
+export { Switch } from './switch';
+export type { SwitchProps } from './switch';
+
 export { Textarea } from './textarea';
 export type { TextareaProps } from './textarea';
 
