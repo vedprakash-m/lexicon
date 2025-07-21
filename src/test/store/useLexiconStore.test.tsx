@@ -54,11 +54,14 @@ describe('useLexiconStore', () => {
       title: 'Bhagavad Gita',
       author: 'Krishna',
       language: 'en',
-      content: 'Chapter 1...',
+      sourceType: 'scripture' as const,
+      processingStatus: 'pending' as const,
       metadata: {
         chapters: 18,
         verses: 700,
-        source: 'vedabase.io'
+        source: 'vedabase.io',
+        tags: [],
+        customFields: {}
       }
     }
 

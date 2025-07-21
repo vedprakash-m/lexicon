@@ -1,8 +1,8 @@
 import { ReactElement } from 'react'
 import { render, RenderOptions } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { TooltipProvider } from '../components/ui/Tooltip'
-import { ThemeProvider } from '../components/theme/ThemeProvider'
+import { TooltipProvider } from '../components/ui/tooltip'
+import React from 'react'
 
 // Create a wrapper component with all necessary providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
@@ -14,15 +14,9 @@ const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
     },
   })
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <TooltipProvider>
-          {children}
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
-  )
+  return React.createElement(QueryClientProvider, { client: queryClient },
+    React.createElement(TooltipProvider, { children }, children)
+  );
 }
 
 const customRender = (

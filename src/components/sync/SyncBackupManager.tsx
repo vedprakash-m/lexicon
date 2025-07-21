@@ -232,7 +232,7 @@ export const SyncBackupManager: React.FC = () => {
                   </Button>
                 )}
                 
-                <Dialog open={showSyncConfig} onOpenChange={setShowSyncConfig}>
+                <Dialog open={showSyncConfig} onOpenChange={setShowSyncConfig} onClose={() => setShowSyncConfig(false)}>
                   <DialogTrigger asChild>
                     <Button variant="outline">
                       <Settings className="h-4 w-4 mr-2" />
@@ -252,17 +252,13 @@ export const SyncBackupManager: React.FC = () => {
                         <Select 
                           value={syncConfigForm.provider} 
                           onValueChange={(value) => setSyncConfigForm(prev => ({ ...prev, provider: value }))}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="local">Local Storage</SelectItem>
-                            <SelectItem value="icloud">iCloud</SelectItem>
-                            <SelectItem value="google_drive">Google Drive</SelectItem>
-                            <SelectItem value="dropbox">Dropbox</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          options={[
+                            { value: 'local', label: 'Local Storage' },
+                            { value: 'icloud', label: 'iCloud' },
+                            { value: 'google_drive', label: 'Google Drive' },
+                            { value: 'dropbox', label: 'Dropbox' }
+                          ]}
+                        />
                       </div>
 
                       <div className="space-y-2">

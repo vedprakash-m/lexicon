@@ -15,6 +15,7 @@ import { useFocusTrap, useReducedMotion } from '../../lib/accessibility';
 export interface DialogProps {
   open: boolean;
   onClose: () => void;
+  onOpenChange?: (open: boolean) => void;
   children: React.ReactNode;
   className?: string;
   title?: string;
@@ -51,6 +52,7 @@ export interface DialogFooterProps {
 const Dialog: React.FC<DialogProps> = ({ 
   open, 
   onClose, 
+  onOpenChange,
   children, 
   className,
   title,
@@ -61,25 +63,30 @@ const Dialog: React.FC<DialogProps> = ({
   const prefersReducedMotion = useReducedMotion();
   const focusTrapRef = useFocusTrap(open);
 
+  const handleClose = () => {
+    onClose();
+    onOpenChange?.(false);
+  };
+
   // Handle escape key
   useEffect(() => {
     if (!open || !closeOnEscape) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
-  }, [open, closeOnEscape, onClose]);
+  }, [open, closeOnEscape, handleClose]);
 
-  const handleOverlayClick = closeOnOverlayClick ? onClose : undefined;
+  const handleOverlayClick = closeOnOverlayClick ? handleClose : undefined;
 
   return (
     <Transition appear show={open} as={Fragment}>
-      <HeadlessDialog as="div" className="relative z-10" onClose={onClose}>
+      <HeadlessDialog as="div" className="relative z-10" onClose={handleClose}>
         <Transition.Child
           as={Fragment}
           enter={prefersReducedMotion ? "" : "ease-out duration-300"}
@@ -186,4 +193,12 @@ export {
   DialogDescription,
   DialogFooter,
   DialogClose,
+};
+
+// Add DialogTrigger for compatibility
+export const DialogTrigger: React.FC<{ 
+  children: React.ReactNode; 
+  asChild?: boolean; 
+}> = ({ children, asChild }) => {
+  return React.createElement(React.Fragment, {}, children);
 };

@@ -14,6 +14,12 @@ export interface TabsProps {
   onChange?: (index: number) => void;
   children: React.ReactNode;
   className?: string;
+  // Add support for defaultValue and value for compatibility
+  defaultValue?: string;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  // Add onIndexChange for compatibility
+  onIndexChange?: (index: number) => void;
 }
 
 export interface TabListProps {
@@ -25,6 +31,8 @@ export interface TabProps {
   children: React.ReactNode;
   className?: string;
   disabled?: boolean;
+  // Add support for value prop
+  value?: string;
 }
 
 export interface TabPanelsProps {
@@ -35,20 +43,28 @@ export interface TabPanelsProps {
 export interface TabPanelProps {
   children: React.ReactNode;
   className?: string;
+  // Add support for value prop
+  value?: string;
 }
 
 const Tabs: React.FC<TabsProps> = ({ 
   defaultIndex, 
   selectedIndex, 
   onChange, 
+  onIndexChange,
   children, 
   className 
 }) => {
+  const handleChange = (index: number) => {
+    onChange?.(index);
+    onIndexChange?.(index);
+  };
+
   return (
     <HeadlessTab.Group
       defaultIndex={defaultIndex}
       selectedIndex={selectedIndex}
-      onChange={onChange}
+      onChange={handleChange}
       as="div"
       className={className}
     >

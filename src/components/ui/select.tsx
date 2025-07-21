@@ -94,4 +94,47 @@ const Select = React.forwardRef<HTMLButtonElement, SelectProps>(
 
 Select.displayName = 'Select';
 
+// Additional components for compatibility
+export const SelectContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & {
+    children?: React.ReactNode;
+  }
+>(({ children, className, ...props }, ref) => 
+  React.createElement('div', { ref, className, ...props }, children)
+);
+SelectContent.displayName = 'SelectContent';
+
+export const SelectItem = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & {
+    value?: string;
+    children?: React.ReactNode;
+  }
+>(({ children, className, value, ...props }, ref) => 
+  React.createElement('div', { ref, className, 'data-value': value, ...props }, children)
+);
+SelectItem.displayName = 'SelectItem';
+
+export const SelectTrigger = React.forwardRef<
+  HTMLButtonElement,
+  React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    children?: React.ReactNode;
+  }
+>(({ children, className, ...props }, ref) => 
+  React.createElement('button', { ref, className, ...props }, children)
+);
+SelectTrigger.displayName = 'SelectTrigger';
+
+export const SelectValue = React.forwardRef<
+  HTMLSpanElement,
+  React.HTMLAttributes<HTMLSpanElement> & {
+    placeholder?: string;
+    children?: React.ReactNode;
+  }
+>(({ children, className, placeholder, ...props }, ref) => 
+  React.createElement('span', { ref, className, ...props }, children || placeholder)
+);
+SelectValue.displayName = 'SelectValue';
+
 export { Select };

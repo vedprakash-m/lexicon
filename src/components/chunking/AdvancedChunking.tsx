@@ -208,7 +208,7 @@ export default function AdvancedChunking({ onChunkingComplete }: AdvancedChunkin
             const job = await invoke('get_chunking_job', { jobId }) as ChunkingJob;
             if (job.status === 'completed') {
               clearInterval(checkJob);
-              const chunks = await invoke('get_job_chunks', { jobId });
+              const chunks = await invoke('get_job_chunks', { jobId }) as any[];
               onChunkingComplete(jobId, chunks);
             }
           } catch (error) {

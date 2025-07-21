@@ -289,7 +289,7 @@ export function FeatureTour({ isActive, tourId, steps: customSteps, onComplete, 
               <div className="p-4 space-y-3">
                 <div className="flex items-start gap-2">
                   {currentStep.action === 'click' && <MousePointer className="w-4 h-4 text-orange-500 mt-0.5" />}
-                  {currentStep.required && <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5" />}
+                  {'required' in currentStep && currentStep.required && <Lightbulb className="w-4 h-4 text-yellow-500 mt-0.5" />}
                   <div className="flex-1">
                     <h3 className="font-semibold text-sm">{currentStep.title}</h3>
                     <p className="text-sm text-muted-foreground mt-1">{currentStep.content}</p>

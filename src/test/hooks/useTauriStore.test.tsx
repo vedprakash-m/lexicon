@@ -46,10 +46,21 @@ describe('Store Hooks Tests', () => {
           includeMetadata: true,
           weightingStrategy: 'balanced',
         },
+        cloudSync: {
+          enabled: false,
+          provider: 'none',
+          autoSync: false,
+          syncInterval: 60,
+          encryption: true,
+          compression: true,
+          syncPatterns: [],
+          excludePatterns: []
+        },
         notifications: {
           processingComplete: true,
           errors: true,
           updates: false,
+          cloudSync: false,
         },
       },
       activeDatasetId: null,

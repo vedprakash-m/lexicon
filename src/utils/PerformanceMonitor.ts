@@ -140,8 +140,8 @@ export class PerformanceMonitor {
       if (navEntries.length > 0) {
         const nav = navEntries[0] as PerformanceNavigationTiming;
         this.recordMetric('ttfb', nav.responseStart - nav.requestStart, 'vitals');
-        this.recordMetric('dom_load', nav.domContentLoadedEventEnd - nav.navigationStart, 'runtime');
-        this.recordMetric('page_load', nav.loadEventEnd - nav.navigationStart, 'runtime');
+        this.recordMetric('dom_load', nav.domContentLoadedEventEnd - (nav as any).navigationStart, 'runtime');
+        this.recordMetric('page_load', nav.loadEventEnd - (nav as any).navigationStart, 'runtime');
       }
     }
   }
@@ -219,22 +219,11 @@ export class PerformanceMonitor {
       
       useEffect(() => {
         const renderEnd = performance.now();
-        const renderTime = renderEnd - renderStart;
-        this.recordMetric(`component_render_${componentName}`, renderTime, 'runtime');
-        
-        // Track render times for this component
-        if (!this.renderTimes.has(componentName)) {
-          this.renderTimes.set(componentName, []);
-        }
-        const times = this.renderTimes.get(componentName)!;
-        times.push(renderTime);
-        if (times.length > 50) {
-          times.splice(0, times.length - 50);
-        }
+        console.log(`Component ${Component.displayName || Component.name} rendered in ${renderEnd - renderStart}ms`);
       });
-      
+
       return React.createElement(Component, { ...props, ref });
-    })) as T;
+    })) as unknown as T;
   }
 
   /**
