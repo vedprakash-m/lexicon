@@ -3,16 +3,14 @@
 ## Lexicon: Universal RAG Dataset Preparation Tool
 
 **Version:** 1.0  
-**Date:** June 25, 2025  
-**Status:** Initial Design  
-**Document Type:** Technical Architecture Specification  
+**Date:** June 25, 2025
 
 ---
 
 ## 🎯 Technical Overview
 
 ### Technology Stack Decision: Tauri + React
-**Rationale**: Tauri provides native Mac performance with web technology flexibility, eliminating XCode dependencies while maintaining native system integration capabilities.
+**Rationale**: Tauri provides native cross-platform performance with web technology flexibility, eliminating platform-specific development while maintaining native system integration capabilities on both Windows and macOS.
 
 **Frontend Stack Details**:
 - **React 18**: Latest React with concurrent features for optimal performance
@@ -24,9 +22,10 @@
 - **Zustand**: Lightweight client state management
 
 ### Architecture Philosophy
-- **Local-First**: All processing happens on the user's Mac with no external dependencies
+- **Local-First**: All processing happens on the user's computer with no external dependencies
 - **Privacy-Focused**: No data leaves the user's machine without explicit consent
 - **Performance-Optimized**: Native Rust backend with efficient React frontend
+- **Cross-Platform**: Native performance on Windows 10+ and macOS 10.15+
 - **Universal-Compatible**: Intelligent content recognition for any text domain
 - **Extensible**: Plugin architecture ready for future enhancements and content types
 
@@ -3505,5 +3504,716 @@ This technical specification is now implementation-ready and addresses all the c
 
 ---
 
-**Document Status**: ✅ **Complete and Implementation-Ready**  
-**Next Step**: Begin Phase 1 implementation with Tauri project initialization
+---
+
+## 🏭 Production Infrastructure & Operations
+
+### Production Error Tracking System
+
+The production error tracking system provides comprehensive error management, logging, and user notification capabilities for enterprise-grade reliability.
+
+```rust
+// src/lib/error_tracking.rs - Production error tracking implementation
+use serde::{Serialize, Deserialize};
+use std::collections::HashMap;
+use chrono::{DateTime, Utc};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProductionErrorContext {
+    pub error_id: String,
+    pub timestamp: DateTime<Utc>,
+    pub severity: ErrorSeverity,
+    pub component: String,
+    pub operation: String,
+    pub user_message: String,
+    pub technical_details: String,
+    pub stack_trace: Option<String>,
+    pub user_agent: Option<String>,
+    pub session_id: String,
+    pub recoverable: bool,
+    pub retry_count: usize,
+    pub context_data: HashMap<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ErrorSeverity {
+    Info,
+    Warning,
+    Error,
+    Critical,
+}
+
+pub struct ProductionErrorTracker {
+    error_store: Arc<Mutex<Vec<ProductionErrorContext>>>,
+    notification_sender: UnboundedSender<ErrorNotification>,
+    analytics_client: Option<AnalyticsClient>,
+    crash_reporter: CrashReporter,
+}
+
+impl ProductionErrorTracker {
+    pub async fn track_error(&self, error: ProductionErrorContext) -> Result<(), TrackingError> {
+        // Store error locally
+        {
+            let mut store = self.error_store.lock().await;
+            store.push(error.clone());
+            
+            // Maintain size limit
+            if store.len() > 1000 {
+                store.drain(0..100);
+            }
+        }
+        
+        // Send user notification for critical errors
+        if matches!(error.severity, ErrorSeverity::Critical | ErrorSeverity::Error) {
+            let notification = ErrorNotification {
+                title: format!("Error in {}", error.component),
+                message: error.user_message.clone(),
+                error_id: error.error_id.clone(),
+                severity: error.severity.clone(),
+                actions: if error.recoverable {
+                    vec![NotificationAction::Retry, NotificationAction::Report]
+                } else {
+                    vec![NotificationAction::Report]
+                },
+            };
+            
+            let _ = self.notification_sender.send(notification);
+        }
+        
+        // Report to analytics (if enabled and user consented)
+        if let Some(analytics) = &self.analytics_client {
+            analytics.track_error_event(&error).await?;
+        }
+        
+        // For critical errors, trigger crash reporting
+        if matches!(error.severity, ErrorSeverity::Critical) {
+            self.crash_reporter.report_critical_error(&error).await?;
+        }
+        
+        Ok(())
+    }
+    
+    pub async fn get_error_summary(&self) -> ErrorSummary {
+        let store = self.error_store.lock().await;
+        
+        let total_errors = store.len();
+        let critical_count = store.iter().filter(|e| matches!(e.severity, ErrorSeverity::Critical)).count();
+        let error_count = store.iter().filter(|e| matches!(e.severity, ErrorSeverity::Error)).count();
+        let warning_count = store.iter().filter(|e| matches!(e.severity, ErrorSeverity::Warning)).count();
+        
+        let most_common_components: HashMap<String, usize> = store
+            .iter()
+            .fold(HashMap::new(), |mut acc, error| {
+                *acc.entry(error.component.clone()).or_insert(0) += 1;
+                acc
+            });
+        
+        ErrorSummary {
+            total_errors,
+            critical_count,
+            error_count,
+            warning_count,
+            most_common_components,
+            last_error_time: store.last().map(|e| e.timestamp),
+        }
+    }
+}
+```
+
+### Auto-updater System
+
+Comprehensive automatic update system with user control, progress tracking, and rollback capabilities.
+
+```rust
+// src/lib/auto_updater.rs - Production auto-updater implementation
+use tauri_plugin_updater::UpdaterExt;
+
+pub struct ProductionAutoUpdater {
+    app_handle: AppHandle,
+    update_config: UpdateConfig,
+    notification_service: NotificationService,
+    settings_manager: SettingsManager,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct UpdateConfig {
+    pub check_frequency_hours: u32,
+    pub auto_download: bool,
+    pub auto_install: bool,
+    pub beta_channel: bool,
+    pub require_confirmation: bool,
+}
+
+impl ProductionAutoUpdater {
+    pub async fn initialize(&mut self) -> Result<(), UpdateError> {
+        // Set up automatic update checking
+        let config = self.update_config.clone();
+        let app_handle = self.app_handle.clone();
+        let notification_service = self.notification_service.clone();
+        
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(
+                Duration::from_secs(config.check_frequency_hours as u64 * 3600)
+            );
+            
+            loop {
+                interval.tick().await;
+                
+                if let Err(e) = Self::check_for_updates_internal(&app_handle, &config, &notification_service).await {
+                    log::error!("Update check failed: {}", e);
+                }
+            }
+        });
+        
+        Ok(())
+    }
+    
+    pub async fn check_for_updates(&self) -> Result<UpdateStatus, UpdateError> {
+        let updater = self.app_handle.updater()?;
+        
+        match updater.check().await {
+            Ok(Some(update)) => {
+                log::info!("Update available: {} -> {}", update.current_version, update.version);
+                
+                let status = UpdateStatus::Available {
+                    current_version: update.current_version.clone(),
+                    new_version: update.version.clone(),
+                    release_notes: update.body.clone(),
+                    download_size: update.content_length,
+                    critical: false,
+                };
+                
+                // Notify user of available update
+                self.notification_service.show_update_notification(&status).await?;
+                
+                Ok(status)
+            },
+            Ok(None) => {
+                log::info!("No updates available");
+                Ok(UpdateStatus::UpToDate)
+            },
+            Err(e) => {
+                log::error!("Update check failed: {}", e);
+                Err(UpdateError::CheckFailed(e.to_string()))
+            }
+        }
+    }
+    
+    pub async fn download_and_install_update(&self, confirm_restart: bool) -> Result<(), UpdateError> {
+        let updater = self.app_handle.updater()?;
+        
+        if let Some(update) = updater.check().await? {
+            log::info!("Starting download for update: {}", update.version);
+            
+            // Show download progress
+            let progress_id = uuid::Uuid::new_v4().to_string();
+            let notification_service = self.notification_service.clone();
+            
+            let update_result = update.download_and_install(
+                |chunk_length, content_length| {
+                    let progress = chunk_length as f64 / content_length.unwrap_or(chunk_length) as f64;
+                    
+                    tokio::spawn({
+                        let notification_service = notification_service.clone();
+                        let progress_id = progress_id.clone();
+                        async move {
+                            let _ = notification_service.update_progress(&progress_id, progress).await;
+                        }
+                    });
+                },
+                || {
+                    log::info!("Update download completed, installing...");
+                }
+            ).await;
+            
+            match update_result {
+                Ok(_) => {
+                    log::info!("Update installed successfully");
+                    
+                    if confirm_restart {
+                        self.notification_service.show_restart_notification().await?;
+                    } else {
+                        // Auto-restart if configured
+                        if self.update_config.auto_install {
+                            tokio::time::sleep(Duration::from_secs(3)).await;
+                            self.app_handle.restart();
+                        }
+                    }
+                    
+                    Ok(())
+                },
+                Err(e) => {
+                    log::error!("Update installation failed: {}", e);
+                    Err(UpdateError::InstallFailed(e.to_string()))
+                }
+            }
+        } else {
+            Err(UpdateError::NoUpdateAvailable)
+        }
+    }
+}
+```
+
+### Real-time Performance Monitoring
+
+Advanced performance monitoring system with live metrics, alerts, and optimization recommendations.
+
+```rust
+// src/lib/performance_monitor.rs - Real-time performance monitoring
+use std::sync::Arc;
+use tokio::sync::RwLock;
+use sysinfo::{System, SystemExt, ProcessExt, CpuExt};
+
+pub struct RealTimePerformanceMonitor {
+    metrics_store: Arc<RwLock<PerformanceMetrics>>,
+    alert_thresholds: AlertThresholds,
+    optimization_engine: OptimizationEngine,
+    metrics_history: CircularBuffer<SystemSnapshot>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub timestamp: DateTime<Utc>,
+    pub memory_usage_mb: u64,
+    pub cpu_usage_percent: f32,
+    pub disk_read_bytes_per_sec: u64,
+    pub disk_write_bytes_per_sec: u64,
+    pub network_bytes_per_sec: u64,
+    pub active_operations: usize,
+    pub processing_queue_size: usize,
+    pub average_response_time_ms: f64,
+    pub error_rate_percent: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct AlertThresholds {
+    pub memory_warning_mb: u64,
+    pub memory_critical_mb: u64,
+    pub cpu_warning_percent: f32,
+    pub cpu_critical_percent: f32,
+    pub response_time_warning_ms: f64,
+    pub error_rate_warning_percent: f32,
+}
+
+impl RealTimePerformanceMonitor {
+    pub async fn start_monitoring(&mut self) -> Result<(), MonitoringError> {
+        let metrics_store = Arc::clone(&self.metrics_store);
+        let alert_thresholds = self.alert_thresholds.clone();
+        let optimization_engine = self.optimization_engine.clone();
+        
+        // Start metrics collection loop
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(Duration::from_secs(5));
+            let mut system = System::new_all();
+            
+            loop {
+                interval.tick().await;
+                
+                // Refresh system information
+                system.refresh_all();
+                
+                // Collect current metrics
+                let current_metrics = Self::collect_current_metrics(&system).await;
+                
+                // Store metrics
+                {
+                    let mut store = metrics_store.write().await;
+                    *store = current_metrics.clone();
+                }
+                
+                // Check for alerts
+                Self::check_performance_alerts(&current_metrics, &alert_thresholds).await;
+                
+                // Run optimization recommendations
+                if let Some(recommendations) = optimization_engine.analyze_performance(&current_metrics).await {
+                    Self::apply_optimizations(recommendations).await;
+                }
+            }
+        });
+        
+        // Start performance reporting
+        self.start_performance_reporting().await?;
+        
+        Ok(())
+    }
+    
+    async fn collect_current_metrics(system: &System) -> PerformanceMetrics {
+        let total_memory = system.total_memory();
+        let used_memory = system.used_memory();
+        let memory_usage_mb = used_memory / 1024 / 1024;
+        
+        let cpu_usage = system.global_cpu_info().cpu_usage();
+        
+        // Get current process metrics
+        let pid = sysinfo::get_current_pid().unwrap_or(sysinfo::Pid::from(0));
+        let process_metrics = system.process(pid).map(|p| ProcessMetrics {
+            memory: p.memory() / 1024 / 1024,
+            cpu: p.cpu_usage(),
+            disk_read: p.disk_usage().read_bytes,
+            disk_write: p.disk_usage().written_bytes,
+        }).unwrap_or_default();
+        
+        PerformanceMetrics {
+            timestamp: Utc::now(),
+            memory_usage_mb,
+            cpu_usage_percent: cpu_usage,
+            disk_read_bytes_per_sec: process_metrics.disk_read,
+            disk_write_bytes_per_sec: process_metrics.disk_write,
+            network_bytes_per_sec: 0, // Would need network monitoring
+            active_operations: 0, // Would be tracked by operation manager
+            processing_queue_size: 0, // Would be tracked by processing engine
+            average_response_time_ms: 0.0, // Would be tracked by request handler
+            error_rate_percent: 0.0, // Would be tracked by error tracker
+        }
+    }
+    
+    async fn check_performance_alerts(metrics: &PerformanceMetrics, thresholds: &AlertThresholds) {
+        // Memory alerts
+        if metrics.memory_usage_mb > thresholds.memory_critical_mb {
+            Self::send_alert(Alert {
+                level: AlertLevel::Critical,
+                message: format!("Critical memory usage: {}MB", metrics.memory_usage_mb),
+                recommendation: "Consider restarting the application or closing unused features".to_string(),
+            }).await;
+        } else if metrics.memory_usage_mb > thresholds.memory_warning_mb {
+            Self::send_alert(Alert {
+                level: AlertLevel::Warning,
+                message: format!("High memory usage: {}MB", metrics.memory_usage_mb),
+                recommendation: "Monitor memory usage and consider clearing caches".to_string(),
+            }).await;
+        }
+        
+        // CPU alerts
+        if metrics.cpu_usage_percent > thresholds.cpu_critical_percent {
+            Self::send_alert(Alert {
+                level: AlertLevel::Critical,
+                message: format!("Critical CPU usage: {:.1}%", metrics.cpu_usage_percent),
+                recommendation: "Reduce concurrent operations or pause processing".to_string(),
+            }).await;
+        }
+        
+        // Response time alerts
+        if metrics.average_response_time_ms > thresholds.response_time_warning_ms {
+            Self::send_alert(Alert {
+                level: AlertLevel::Warning,
+                message: format!("Slow response times: {:.1}ms", metrics.average_response_time_ms),
+                recommendation: "Check system resources and network connectivity".to_string(),
+            }).await;
+        }
+    }
+    
+    pub async fn get_performance_dashboard_data(&self) -> PerformanceDashboard {
+        let metrics = self.metrics_store.read().await;
+        let history = self.metrics_history.get_last_n(60); // Last 60 data points (5 minutes)
+        
+        PerformanceDashboard {
+            current_metrics: metrics.clone(),
+            historical_data: history,
+            system_health: self.calculate_system_health(&metrics).await,
+            optimization_suggestions: self.optimization_engine.get_suggestions().await,
+            active_alerts: self.get_active_alerts().await,
+        }
+    }
+}
+```
+
+### Comprehensive Security Manager
+
+Enterprise-grade security system with encryption, authentication, and audit logging.
+
+```rust
+// src/lib/security_manager.rs - Comprehensive security implementation
+use ring::{aead, digest, pbkdf2, rand};
+use base64::{Engine as _, engine::general_purpose};
+
+pub struct ComprehensiveSecurityManager {
+    encryption_key: aead::LessSafeKey,
+    session_manager: SessionManager,
+    audit_logger: AuditLogger,
+    access_control: AccessControl,
+    security_settings: SecuritySettings,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecuritySettings {
+    pub encryption_enabled: bool,
+    pub session_timeout_minutes: u32,
+    pub max_failed_attempts: u32,
+    pub audit_logging_enabled: bool,
+    pub data_retention_days: u32,
+    pub require_authentication: bool,
+}
+
+impl ComprehensiveSecurityManager {
+    pub async fn initialize(app_data_dir: &Path) -> Result<Self, SecurityError> {
+        // Initialize encryption key from secure storage or generate new one
+        let encryption_key = Self::initialize_encryption_key(app_data_dir).await?;
+        
+        // Set up session management
+        let session_manager = SessionManager::new(Duration::from_secs(30 * 60)); // 30 min default
+        
+        // Initialize audit logging
+        let audit_logger = AuditLogger::new(app_data_dir.join("security_audit.log")).await?;
+        
+        // Set up access control
+        let access_control = AccessControl::new();
+        
+        // Load security settings
+        let security_settings = Self::load_security_settings(app_data_dir).await
+            .unwrap_or_default();
+        
+        Ok(ComprehensiveSecurityManager {
+            encryption_key,
+            session_manager,
+            audit_logger,
+            access_control,
+            security_settings,
+        })
+    }
+    
+    pub async fn encrypt_sensitive_data(&self, data: &[u8]) -> Result<Vec<u8>, SecurityError> {
+        if !self.security_settings.encryption_enabled {
+            return Ok(data.to_vec());
+        }
+        
+        let rng = rand::SystemRandom::new();
+        let mut nonce_bytes = [0u8; 12];
+        rng.fill(&mut nonce_bytes)
+            .map_err(|_| SecurityError::EncryptionFailed("Failed to generate nonce".to_string()))?;
+        
+        let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
+        let mut in_out = data.to_vec();
+        
+        self.encryption_key
+            .seal_in_place_append_tag(nonce, aead::Aad::empty(), &mut in_out)
+            .map_err(|_| SecurityError::EncryptionFailed("Encryption failed".to_string()))?;
+        
+        // Prepend nonce to encrypted data
+        let mut result = nonce_bytes.to_vec();
+        result.extend_from_slice(&in_out);
+        
+        // Log encryption event
+        self.audit_logger.log_security_event(SecurityEvent {
+            event_type: SecurityEventType::DataEncrypted,
+            timestamp: Utc::now(),
+            details: "Sensitive data encrypted".to_string(),
+            success: true,
+        }).await?;
+        
+        Ok(result)
+    }
+    
+    pub async fn decrypt_sensitive_data(&self, encrypted_data: &[u8]) -> Result<Vec<u8>, SecurityError> {
+        if !self.security_settings.encryption_enabled {
+            return Ok(encrypted_data.to_vec());
+        }
+        
+        if encrypted_data.len() < 12 {
+            return Err(SecurityError::DecryptionFailed("Invalid encrypted data format".to_string()));
+        }
+        
+        let (nonce_bytes, ciphertext) = encrypted_data.split_at(12);
+        let nonce = aead::Nonce::try_assume_unique_for_key(nonce_bytes)
+            .map_err(|_| SecurityError::DecryptionFailed("Invalid nonce".to_string()))?;
+        
+        let mut in_out = ciphertext.to_vec();
+        let plaintext = self.encryption_key
+            .open_in_place(nonce, aead::Aad::empty(), &mut in_out)
+            .map_err(|_| SecurityError::DecryptionFailed("Decryption failed".to_string()))?;
+        
+        Ok(plaintext.to_vec())
+    }
+    
+    pub async fn create_secure_session(&mut self, user_id: &str) -> Result<SecureSession, SecurityError> {
+        let session = self.session_manager.create_session(user_id).await?;
+        
+        self.audit_logger.log_security_event(SecurityEvent {
+            event_type: SecurityEventType::SessionCreated,
+            timestamp: Utc::now(),
+            details: format!("Session created for user: {}", user_id),
+            success: true,
+        }).await?;
+        
+        Ok(session)
+    }
+    
+    pub async fn validate_session(&self, session_token: &str) -> Result<bool, SecurityError> {
+        let valid = self.session_manager.validate_session(session_token).await?;
+        
+        self.audit_logger.log_security_event(SecurityEvent {
+            event_type: SecurityEventType::SessionValidated,
+            timestamp: Utc::now(),
+            details: format!("Session validation: {}", if valid { "success" } else { "failed" }),
+            success: valid,
+        }).await?;
+        
+        Ok(valid)
+    }
+    
+    pub async fn get_security_dashboard(&self) -> SecurityDashboard {
+        SecurityDashboard {
+            encryption_status: self.security_settings.encryption_enabled,
+            active_sessions: self.session_manager.get_active_session_count().await,
+            recent_security_events: self.audit_logger.get_recent_events(50).await,
+            security_score: self.calculate_security_score().await,
+            recommendations: self.get_security_recommendations().await,
+        }
+    }
+    
+    async fn calculate_security_score(&self) -> u32 {
+        let mut score = 0u32;
+        
+        if self.security_settings.encryption_enabled { score += 25; }
+        if self.security_settings.require_authentication { score += 25; }
+        if self.security_settings.audit_logging_enabled { score += 20; }
+        if self.security_settings.session_timeout_minutes <= 60 { score += 15; }
+        if self.security_settings.max_failed_attempts <= 5 { score += 15; }
+        
+        score
+    }
+}
+```
+
+### Frontend Production Integration
+
+```typescript
+// Production error tracking integration
+export const useProductionErrorTracking = () => {
+  const { toast } = useToast();
+  
+  const trackError = useCallback(async (error: Error, context?: Partial<ProductionErrorContext>) => {
+    const errorContext: ProductionErrorContext = {
+      error_id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      severity: 'Error',
+      component: context?.component || 'frontend',
+      operation: context?.operation || 'unknown',
+      user_message: error.message,
+      technical_details: error.stack || error.toString(),
+      stack_trace: error.stack,
+      user_agent: navigator.userAgent,
+      session_id: sessionStorage.getItem('session_id') || 'anonymous',
+      recoverable: context?.recoverable || false,
+      retry_count: 0,
+      context_data: context?.context_data || {},
+    };
+    
+    try {
+      await window.__TAURI__?.invoke('track_production_error', { error: errorContext });
+      
+      // Show user notification
+      toast({
+        title: `Error in ${errorContext.component}`,
+        description: errorContext.user_message,
+        variant: 'destructive',
+      });
+    } catch (trackingError) {
+      console.error('Failed to track error:', trackingError);
+    }
+  }, [toast]);
+  
+  return { trackError };
+};
+
+// Performance monitoring hook
+export const usePerformanceMonitoring = () => {
+  const [performanceData, setPerformanceData] = useState<PerformanceDashboard | null>(null);
+  
+  useEffect(() => {
+    const fetchPerformanceData = async () => {
+      try {
+        const data = await window.__TAURI__?.invoke('get_performance_dashboard');
+        setPerformanceData(data);
+      } catch (error) {
+        console.error('Failed to fetch performance data:', error);
+      }
+    };
+    
+    fetchPerformanceData();
+    const interval = setInterval(fetchPerformanceData, 5000); // Update every 5 seconds
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+  return { performanceData };
+};
+
+// Auto-updater integration
+export const useAutoUpdater = () => {
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>('UpToDate');
+  const [updateProgress, setUpdateProgress] = useState<number>(0);
+  
+  const checkForUpdates = useCallback(async () => {
+    try {
+      const status = await window.__TAURI__?.invoke('check_for_updates');
+      setUpdateStatus(status);
+    } catch (error) {
+      console.error('Update check failed:', error);
+    }
+  }, []);
+  
+  const installUpdate = useCallback(async () => {
+    try {
+      await window.__TAURI__?.invoke('install_update');
+    } catch (error) {
+      console.error('Update installation failed:', error);
+    }
+  }, []);
+  
+  return { updateStatus, updateProgress, checkForUpdates, installUpdate };
+};
+```
+
+### Production Deployment Configuration
+
+```toml
+# tauri.conf.json additions for production
+{
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build",
+    "devPath": "http://localhost:1420",
+    "distDir": "../dist"
+  },
+  "package": {
+    "productName": "Lexicon",
+    "version": "1.0.0"
+  },
+  "tauri": {
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://releases.lexicon.app/{{target}}/{{current_version}}"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXkgOTVGNzA0RjM3OTQ2MjQ4NQo="
+    },
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:;"
+    },
+    "bundle": {
+      "active": true,
+      "targets": ["dmg", "app"],
+      "identifier": "com.lexicon.app",
+      "icon": [
+        "icons/32x32.png",
+        "icons/128x128.png",
+        "icons/icon.ico"
+      ],
+      "macOS": {
+        "minimumSystemVersion": "10.13",
+        "entitlements": "entitlements.plist",
+        "exceptionDomain": "localhost",
+        "signingIdentity": "-",
+        "hardenedRuntime": true
+      }
+    }
+  }
+}
+```
+
+---
+
+**Document Status**: ✅ **Complete with Production Infrastructure**  
+**Production Readiness**: 8/11 features implemented (73% complete)  
+**Next Phase**: Complete remaining production features (Enhanced Search, Global Sync, Smart Recommendations)

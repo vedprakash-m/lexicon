@@ -1,0 +1,46 @@
+{
+  "start_time": "2025-07-20T17:07:15.815923",
+  "test_suites": [
+    {
+      "name": "Python Enhanced Features Integration",
+      "duration": 0.0,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "results": [
+        {
+          "name": "Python Enhanced Features Integration",
+          "status": "failed",
+          "duration": 0.002007722854614258,
+          "error": "[Errno 2] No such file or directory: 'python'"
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Features E2E Integration",
+      "duration": 0.0,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0,
+      "results": [
+        {
+          "name": "Enhanced Features E2E Integration",
+          "status": "failed",
+          "duration": 300.00775599479675,
+          "error": "Test suite timed out"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_suites": 2,
+    "passed_suites": 0,
+    "failed_suites": 2,
+    "total_tests": 2,
+    "passed_tests": 0,
+    "failed_tests": 2,
+    "skipped_tests": 0
+  },
+  "end_time": "2025-07-20T17:12:15.826108",
+  "total_duration": 300.010185
+}

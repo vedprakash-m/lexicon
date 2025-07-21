@@ -1,11 +1,9 @@
 # Product Requirements Document (PRD)
 
-## Lexicon: Universal RAG Dataset Factory
+## Lexicon: Universal RAG Dataset Preparation tool
 
 **Version:** 1.0  
-**Date:** June 25, 2025  
-**Status:** Initial Design  
-**Product Owner:** Lexicon Development Team  
+**Date:** June 25, 2025
 
 ---
 
@@ -26,6 +24,9 @@ Streamline universal content curation by automating the extraction, processing, 
 - **Performance**: Process average book (300 pages) in under 30 minutes on personal hardware
 - **Formats**: Support key personal sources (PDFs, EPUBs, web scraping)
 - **Efficiency**: Reduce manual dataset creation time by 90% for personal projects
+- **Reliability**: 99.9% uptime with comprehensive error tracking and recovery
+- **Security**: Enterprise-grade data protection with encryption and audit logging
+- **Maintainability**: Automated updates and self-healing system capabilities
 
 ### Future Vision: Personal Knowledge Infrastructure
 **Lexicon Phase 4: Agent-Ready Integration** - Beyond dataset creation, Lexicon will serve as the foundation for personal AI agents by providing:
@@ -33,6 +34,7 @@ Streamline universal content curation by automating the extraction, processing, 
 - **Knowledge Graph Creation**: Relationship mapping between processed content for enhanced retrieval
 - **Personal GPT Foundation**: Self-curated knowledge base that truly understands your domain expertise
 - **Cross-Text Analysis**: Comparative analysis across multiple translations and commentaries
+- **Production Intelligence**: Real-time monitoring, automatic optimization, and predictive maintenance
 
 ---
 
@@ -76,7 +78,7 @@ Streamline universal content curation by automating the extraction, processing, 
 ### Lexicon 3-Stage Pipeline Architecture
 
 ```
-📚 STAGE 1: PERSONAL REGISTRY (Mac Native Frontend)
+📚 STAGE 1: PERSONAL REGISTRY (Cross-Platform Desktop App)
 ├── Personal content catalog management
 ├── Simple progress tracking and status monitoring
 ├── Basic quality validation and manual review
@@ -103,7 +105,7 @@ Streamline universal content curation by automating the extraction, processing, 
 
 ## 📋 Functional Requirements
 
-### Stage 1: Personal Registry & Management (Mac Native App)
+### Stage 1: Personal Registry & Management (Cross-Platform Desktop App)
 
 #### FR1: Personal Content Catalog
 - **FR1.1**: Add books/documents via drag-and-drop with basic metadata
@@ -114,12 +116,16 @@ Streamline universal content curation by automating the extraction, processing, 
 - **FR1.6**: Local file and URL validation
 
 #### FR2: Personal Progress Dashboard
-- **FR2.1**: Native Mac interface with real-time status updates
+- **FR2.1**: Native cross-platform interface with real-time status updates
 - **FR2.2**: Simple quality metrics (extraction success, chunk counts)
 - **FR2.3**: Processing time and resource usage monitoring
 - **FR2.4**: Manual priority management with drag-and-drop
 - **FR2.5**: Basic search and filtering across personal catalog
 - **FR2.6**: Export processing reports and statistics
+- **FR2.7**: Real-time performance monitoring with system resource tracking
+- **FR2.8**: Comprehensive error tracking and resolution dashboard
+- **FR2.9**: Update management with automatic version checking and installation
+- **FR2.10**: Security monitoring with audit logging and access control
 
 #### FR3: Personal Quality Control
 - **FR3.1**: Simple validation with configurable thresholds
@@ -128,6 +134,10 @@ Streamline universal content curation by automating the extraction, processing, 
 - **FR3.4**: Basic error reporting and retry capabilities
 - **FR3.5**: Simple rollback for failed processing
 - **FR3.6**: A/B comparison between different chunking approaches
+- **FR3.7**: Comprehensive integration testing across all system components
+- **FR3.8**: Production-grade error tracking with automated reporting and analytics
+- **FR3.9**: Security audit logging with integrity verification and compliance monitoring
+- **FR3.10**: Automated quality assurance with performance regression detection
 
 ### Stage 2: Local Ingestion System
 
@@ -239,7 +249,7 @@ Streamline universal content curation by automating the extraction, processing, 
 ## 🛠️ Technical Requirements
 
 ### Performance Requirements (Personal Use Scale)
-- **TR1**: Process 300-page book in under 30 minutes on personal Mac (8GB RAM, 4 cores - MacBook Air M1 baseline)
+- **TR1**: Process 300-page book in under 30 minutes on personal computer (8GB RAM, 4 cores - baseline hardware for Windows/macOS)
 - **TR2**: Support sequential processing with intelligent resource management
 - **TR3**: Handle books up to 5,000 pages without memory issues
 - **TR4**: Reliable processing pipeline with basic error recovery
@@ -249,7 +259,7 @@ Streamline universal content curation by automating the extraction, processing, 
 - **TR6**: Scale to 1,000+ books in personal catalog with efficient local storage
 - **TR7**: Support personal cloud storage integration for backup and sync
 - **TR8**: Handle large documents without performance degradation
-- **TR9**: Native Mac app with local processing capabilities
+- **TR9**: Native cross-platform app with local processing capabilities
 - **TR10**: Personal cloud storage ready (iCloud, Dropbox, Google Drive)
 
 ### Quality Requirements (Personal Focus)
@@ -268,21 +278,33 @@ Streamline universal content curation by automating the extraction, processing, 
 - **TR21**: Local data management with personal access control
 - **TR22**: Processing history and audit logs for personal reference
 - **TR23**: Personal content privacy with no external data sharing
+- **TR24**: Enterprise-grade security with AES-256-GCM encryption and automatic key rotation
+- **TR25**: Comprehensive authentication and authorization with role-based access control
+- **TR26**: Security audit logging with integrity verification and compliance monitoring
+- **TR27**: Data integrity checks with cryptographic verification and backup validation
+
+### Production Operations
+- **TR28**: Automated update system with background downloading and user-controlled installation
+- **TR29**: Real-time performance monitoring with system resource tracking and alerts
+- **TR30**: Comprehensive error tracking with automatic reporting and resolution workflows
+- **TR31**: Production logging with structured output, rotation, and centralized management
+- **TR32**: Health monitoring with automated diagnostics and self-healing capabilities
+- **TR33**: Backup and recovery with versioned snapshots and disaster recovery planning
 
 ---
 
 ## 🎨 User Experience Requirements
 
-### Native Mac Interface
+### Native Cross-Platform Interface
 - **UX1**: Intuitive drag-and-drop content management using Tauri's native file system integration
-- **UX2**: Real-time progress visualization with React components and native Mac progress indicators
+- **UX2**: Real-time progress visualization with React components and native progress indicators
 - **UX3**: One-click processing with intelligent status updates
-- **UX4**: Native search and filtering with Spotlight-style interface using Tauri APIs
+- **UX4**: Native search and filtering with platform-appropriate interface using Tauri APIs
 - **UX5**: Interactive quality metrics with modern web-based visualizations
 
 ### Personal Workflow Integration
-- **UX6**: Mac Shortcuts integration for automated workflows via Tauri shell commands
-- **UX7**: Notification Center integration for processing updates using Tauri notification APIs
+- **UX6**: Platform automation integration for workflows via Tauri shell commands (Windows PowerShell/macOS Shortcuts)
+- **UX7**: Native notification system integration for processing updates using Tauri notification APIs
 - **UX8**: Native file system integration with organized output folders via Tauri filesystem APIs
 - **UX9**: Personal cloud storage sync with status indicators
 - **UX10**: Simple configuration management with React-based preferences interface
@@ -307,16 +329,16 @@ Streamline universal content curation by automating the extraction, processing, 
 - **INT4**: Integration with current personal RAG project workflows
 
 ### Personal Storage Integration
-- **INT5**: iCloud Drive integration for seamless Mac ecosystem sync
+- **INT5**: Cloud storage integration for seamless ecosystem sync (iCloud for macOS, OneDrive for Windows)
 - **INT6**: Dropbox and Google Drive integration for cross-platform access
 - **INT7**: Local storage organization with configurable directory structures
 - **INT8**: Personal backup and versioning system
-- **INT9**: Mac filesystem integration with Spotlight search support
+- **INT9**: Platform filesystem integration with native search support
 
 ### Personal Workflow Integration
-- **INT10**: Mac Shortcuts integration for automation
-- **INT11**: Finder integration for easy file management
-- **INT12**: Native Mac notifications and progress reporting
+- **INT10**: Platform automation integration (macOS Shortcuts, Windows PowerShell)
+- **INT11**: Native file manager integration for easy file management
+- **INT12**: Native platform notifications and progress reporting
 - **INT13**: Personal productivity tool integration (notes, reminders)
 - **INT14**: Simple export to personal RAG frameworks (LangChain, LlamaIndex)
 
@@ -334,7 +356,7 @@ Streamline universal content curation by automating the extraction, processing, 
 ### Personal System Metrics
 - **M6**: Processing reliability (target: >95% success rate)
 - **M7**: Personal cloud storage sync reliability (target: >99% uptime)
-- **M8**: Mac system integration effectiveness (target: seamless workflow)
+- **M8**: Cross-platform system integration effectiveness (target: seamless workflow)
 - **M9**: Personal workflow efficiency improvement (target: 5x faster dataset creation)
 - **M10**: Personal content organization quality (target: easily searchable and accessible)
 
@@ -342,18 +364,23 @@ Streamline universal content curation by automating the extraction, processing, 
 - **M11**: Local processing performance (target: efficient resource usage)
 - **M12**: Error rate for personal content types (target: <2%)
 - **M13**: Personal data backup reliability (target: 100% data preservation)
-- **M14**: Native Mac app responsiveness (target: smooth, responsive interface)
+- **M14**: Native cross-platform app responsiveness (target: smooth, responsive interface)
 - **M15**: Personal storage efficiency (target: organized, non-redundant storage)
+- **M16**: System availability and uptime (target: >99.9% operational time)
+- **M17**: Security incident response time (target: <1 minute detection, <5 minutes resolution)
+- **M18**: Update deployment success rate (target: >99.5% successful installations)
+- **M19**: Performance optimization effectiveness (target: <1% performance degradation over time)
+- **M20**: Error resolution rate (target: >95% automatic resolution without user intervention)
 
 ---
 
 ## 🗓️ Personal Development Roadmap
 
 ### Phase 1: Core Personal Tool (Weeks 1-3)
-**Milestone: Functional Mac App for Personal Use**
+**Milestone: Functional Cross-Platform App for Personal Use**
 
-#### Week 1: Mac Native Registry
-- Implement native Mac app with Tauri + React frontend
+#### Week 1: Cross-Platform Native Registry
+- Implement native cross-platform app with Tauri + React frontend
 - Create simple book catalog with drag-and-drop support using React components
 - Build personal progress tracking with modern web UI
 - Add support for personal content categories
@@ -380,9 +407,9 @@ Streamline universal content curation by automating the extraction, processing, 
 - Add batch processing support
 
 #### Week 5: Personal Workflow Integration & Book Enrichment
-- Implement Mac Shortcuts integration
-- Add Notification Center support
-- Create Finder integration for easy file access
+- Implement platform automation integration (Windows PowerShell/macOS Shortcuts)
+- Add native notification system support
+- Create native file manager integration for easy file access
 - Build metadata enrichment system (Google Books, OpenLibrary APIs)
 - Implement visual asset management (cover images, author photos)
 - Add book relationship detection and analysis
@@ -392,7 +419,7 @@ Streamline universal content curation by automating the extraction, processing, 
 - Implement personal backup and versioning
 - Create enhanced catalog interface with enriched metadata
 - Create user documentation and tutorials
-- Optimize performance for personal Mac hardware
+- Optimize performance for personal computer hardware
 
 ### Phase 3: Personal Optimization & Advanced Features (Weeks 7-9)
 **Milestone: Production-Ready Personal Tool with Full Enrichment**
@@ -427,7 +454,7 @@ Streamline universal content curation by automating the extraction, processing, 
 - [ ] Achieve 95%+ content extraction accuracy for personal content types
 - [ ] Create consistent, high-quality chunks suitable for personal RAG projects
 - [ ] Successful migration from existing scripture scrapers with data preservation
-- [ ] Seamless integration with personal Mac workflow
+- [ ] Seamless integration with personal cross-platform workflow
 - [ ] **Book enrichment success**: 90%+ of books have enhanced metadata and cover images
 - [ ] **Relationship mapping**: Accurate detection of related books, translations, and editions
 - [ ] **Visual catalog**: Intuitive browsing with cover images and rich metadata display

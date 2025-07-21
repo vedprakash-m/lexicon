@@ -27,6 +27,8 @@ mod security_manager;
 mod security_commands;
 mod selector_commands;
 mod notification_commands;
+mod semantic_search_commands;
+mod error_tracking;
 pub mod models;
 pub mod validation;
 
@@ -150,6 +152,11 @@ use notification_commands::{
     get_notifications, mark_notification_as_read, mark_all_notifications_as_read,
     delete_notification, add_notification, get_unread_notification_count
 };
+use semantic_search_commands::{
+    SemanticSearchEngine, SemanticSearchState, SemanticSearchConfig,
+    initialize_semantic_search, index_documents_for_search,
+    semantic_search, get_search_statistics, quick_search, faceted_search
+};
 use tokio::sync::Mutex;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -228,6 +235,14 @@ pub async fn run() {
   // Initialize scraping state for selector testing
   let scraping_state = ScrapingState::default();
   
+  // Initialize semantic search engine
+  let semantic_search_config = SemanticSearchConfig::default();
+  let semantic_search_engine = SemanticSearchEngine::new(
+    semantic_search_config,
+    python_manager_state.clone()
+  );
+  let semantic_search_state: SemanticSearchState = Arc::new(tokio::sync::Mutex::new(semantic_search_engine));
+  
   tauri::Builder::default()
     .manage(python_manager_state)
     .manage(Mutex::new(environment_manager) as EnvironmentManagerState)
@@ -245,6 +260,7 @@ pub async fn run() {
     .manage(export_manager_state)
     .manage(scraping_state)
     .manage(notification_manager_state)
+    .manage(semantic_search_state)
     .invoke_handler(tauri::generate_handler![
       // Python Manager commands
       discover_python_environment,
@@ -431,8 +447,30 @@ pub async fn run() {
       scrape_url_for_selector_testing,
       test_css_selector,
       validate_extraction_rule,
-      test_css_selector_enhanced
+      test_css_selector_enhanced,
+      // Notification commands
+      get_notifications,
+      mark_notification_as_read,
+      mark_all_notifications_as_read,
+      delete_notification,
+      add_notification,
+      get_unread_notification_count,
+      // Semantic Search commands
+      initialize_semantic_search,
+      index_documents_for_search,
+      semantic_search,
+      get_search_statistics,
+      quick_search,
+      faceted_search,
+      // Error Tracking commands
+      error_tracking::log_errors,
+      error_tracking::get_error_metrics,
+      error_tracking::clear_error_log,
+      error_tracking::export_error_log,
+      error_tracking::cleanup_old_errors
     ])
+    .plugin(tauri_plugin_updater::Builder::new().build())
+    .plugin(tauri_plugin_process::init())
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

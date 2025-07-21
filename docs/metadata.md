@@ -2,12 +2,13 @@
 
 ## Project Overview
 
-**Lexicon** is a Mac-native universal RAG (Retrieval Augmented Generation) dataset preparation tool built with modern technologies. It provides a comprehensive solution for web scraping, text processing, metadata enrichment, and export of high-quality datasets for AI/ML applications, supporting any text content from technical documentation to literature, business documents to religious texts.
+**Lexicon** is a cross-platform universal RAG (Retrieval Augmented Generation) dataset preparation tool built with modern technologies for Windows and macOS. It provides a comprehensive solution for web scraping, text processing, metadata enrichment, and export of high-quality datasets for AI/ML applications, supporting any text content from technical documentation to literature, business documents to religious texts.
 
 **Current Status**: Production-ready with comprehensive feature set  
 **Version**: 1.0.0 (stable release)  
 **License**: AGPL-3.0  
-**Platform**: macOS native application (Tauri + React)
+**Platform**: Cross-platform desktop application (Windows 10+ and macOS 10.15+)  
+**Technology**: Tauri + React for native performance
 
 ## Implementation Status
 

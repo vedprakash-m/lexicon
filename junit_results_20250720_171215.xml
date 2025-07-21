@@ -1,0 +1,13 @@
+<?xml version="1.0" ?>
+<testsuites name="Lexicon Enhanced Features" tests="2" failures="2" skipped="0" time="300.010185">
+  <testsuite name="Python Enhanced Features Integration" tests="1" failures="1" skipped="0" time="0.0">
+    <testcase name="Python Enhanced Features Integration" classname="Python Enhanced Features Integration" time="0.002007722854614258">
+      <failure message="[Errno 2] No such file or directory: 'python'">[Errno 2] No such file or directory: 'python'</failure>
+    </testcase>
+  </testsuite>
+  <testsuite name="Enhanced Features E2E Integration" tests="1" failures="1" skipped="0" time="0.0">
+    <testcase name="Enhanced Features E2E Integration" classname="Enhanced Features E2E Integration" time="300.00775599479675">
+      <failure message="Test suite timed out">Test suite timed out</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

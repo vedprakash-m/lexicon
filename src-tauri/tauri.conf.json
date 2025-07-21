@@ -73,9 +73,17 @@
     },
     "notification": {
       "all": true
+    },
+    "updater": {
+      "active": true,
+      "endpoints": [
+        "https://github.com/vedprakash-m/lexicon/releases/latest/download/latest.json"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJDQUIyQUQxNTMzRUE4OUJcblJ1SlNSYVJZTzZnaTlZSkREa0R2M1RRNXc3Q2ZxRFVQRnR3N2NLT0Y0WEJCWk9jNzNNOGZVWks="
+    },
+    "process": {
+      "all": true
     }
-  },
-  "package": {
-    "version": "1.0.1"
   }
 }
