@@ -1,0 +1,15 @@
+{
+  "ignores": [
+    "@tauri-apps/plugin-process",
+    "@tauri-apps/plugin-updater",
+    "clsx",
+    "tailwind-merge",
+    "@vitest/coverage-v8",
+    "autoprefixer", 
+    "postcss",
+    "tailwindcss",
+    "@vitejs/plugin-react",
+    "rollup"
+  ],
+  "skip-missing": true
+}
