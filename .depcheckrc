@@ -8,6 +8,7 @@
     "autoprefixer", 
     "postcss",
     "tailwindcss",
+    "@tailwindcss/postcss",
     "@vitejs/plugin-react",
     "rollup"
   ],
