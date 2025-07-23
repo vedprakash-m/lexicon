@@ -1,11 +1,8 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "node",
     "skipLibCheck": true,
     "noEmit": true,
-    "checkJs": false,
-    "allowJs": true,
     "strict": false,
     "noImplicitAny": false,
     "strictNullChecks": false,
@@ -14,9 +11,7 @@
     "noImplicitThis": false,
     "noFallthroughCasesInSwitch": false,
     "noUnusedLocals": false,
-    "noUnusedParameters": false,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "noUnusedParameters": false
   },
   "exclude": [
     "node_modules",

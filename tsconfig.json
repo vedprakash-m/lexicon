@@ -38,15 +38,20 @@
     "noUncheckedIndexedAccess": false,
 
     /* Path mapping */
-    "baseUrl": ".",
+    "baseUrl": "./",
     "paths": {
-      "@/*": ["./src/*"],
-      "@/lib/*": ["./src/lib/*"],
-      "@/components/*": ["./src/components/*"],
-      "@/utils/*": ["./src/utils/*"],
-      "@/hooks/*": ["./src/hooks/*"],
-      "@/store/*": ["./src/store/*"],
-      "@/types/*": ["./src/types/*"]
+      "@/*": ["src/*"],
+      "@/lib/*": ["src/lib/*"],
+      "@/lib/utils": ["src/lib/utils.ts"],
+      "@/lib/accessibility": ["src/lib/accessibility.tsx"],
+      "@/lib/errorTracking": ["src/lib/errorTracking.ts"],
+      "@/lib/performanceMonitor": ["src/lib/performanceMonitor.ts"],
+      "@/lib/autoUpdater": ["src/lib/autoUpdater.ts"],
+      "@/components/*": ["src/components/*"],
+      "@/utils/*": ["src/utils/*"],
+      "@/hooks/*": ["src/hooks/*"],
+      "@/store/*": ["src/store/*"],
+      "@/types/*": ["src/types/*"]
     }
   },
   "include": ["src"],
