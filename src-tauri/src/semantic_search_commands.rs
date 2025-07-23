@@ -420,7 +420,7 @@ pub type SemanticSearchState = std::sync::Arc<tokio::sync::Mutex<SemanticSearchE
 
 #[tauri::command]
 pub async fn initialize_semantic_search(
-    config: Option<SemanticSearchConfig>,
+    _config: Option<SemanticSearchConfig>,
     search_state: State<'_, SemanticSearchState>,
 ) -> Result<(), String> {
     let mut search_engine = search_state.lock().await;

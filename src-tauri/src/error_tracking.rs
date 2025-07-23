@@ -231,12 +231,11 @@ impl ErrorTracker {
 #[command]
 pub async fn log_errors(
     errors: Vec<ErrorReport>,
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.lexicon.dataset-tool");
 
     let error_tracker = ErrorTracker::new(&app_data_dir)
         .map_err(|e| format!("Failed to create error tracker: {}", e))?;
@@ -251,12 +250,11 @@ pub async fn log_errors(
 #[command]
 pub async fn get_error_metrics(
     time_range: String,
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
 ) -> Result<ErrorMetrics, String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.lexicon.dataset-tool");
 
     let error_tracker = ErrorTracker::new(&app_data_dir)
         .map_err(|e| format!("Failed to create error tracker: {}", e))?;
@@ -267,11 +265,10 @@ pub async fn get_error_metrics(
 }
 
 #[command]
-pub async fn clear_error_log(app_handle: tauri::AppHandle) -> Result<(), String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+pub async fn clear_error_log(_app_handle: tauri::AppHandle) -> Result<(), String> {
+    let app_data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.lexicon.dataset-tool");
 
     let log_file_path = app_data_dir.join("error_log.jsonl");
     
@@ -286,12 +283,11 @@ pub async fn clear_error_log(app_handle: tauri::AppHandle) -> Result<(), String>
 #[command]
 pub async fn export_error_log(
     output_path: String,
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.lexicon.dataset-tool");
 
     let error_tracker = ErrorTracker::new(&app_data_dir)
         .map_err(|e| format!("Failed to create error tracker: {}", e))?;
@@ -307,12 +303,11 @@ pub async fn export_error_log(
 #[command]
 pub async fn cleanup_old_errors(
     days_to_keep: u32,
-    app_handle: tauri::AppHandle,
+    _app_handle: tauri::AppHandle,
 ) -> Result<(), String> {
-    let app_data_dir = app_handle
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("com.lexicon.dataset-tool");
 
     let error_tracker = ErrorTracker::new(&app_data_dir)
         .map_err(|e| format!("Failed to create error tracker: {}", e))?;
