@@ -65,22 +65,29 @@ class PerformanceTracker {
   // Collect Web Vitals and performance metrics
   async collectMetrics(route: string): Promise<PerformanceMetrics | null> {
     try {
+      // Check if performance APIs are available (not in test environment)
+      if (typeof window === 'undefined' || !window.performance || !window.performance.getEntriesByType) {
+        return null;
+      }
+
       const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
       const paint = performance.getEntriesByType('paint');
       
       const fcp = paint.find(entry => entry.name === 'first-contentful-paint')?.startTime || 0;
       
-      // Get current metrics
+      // Get current metrics with safe fallbacks
       const metrics: PerformanceMetrics = {
         routeLoadTime: this.getLastNavigationDuration(),
-        bundleLoadTime: navigation.loadEventEnd - navigation.loadEventStart,
+        bundleLoadTime: navigation?.loadEventEnd && navigation?.loadEventStart 
+          ? navigation.loadEventEnd - navigation.loadEventStart 
+          : 0,
         firstContentfulPaint: fcp,
         largestContentfulPaint: 0, // Will be updated by observer
         cumulativeLayoutShift: 0, // Will be updated by observer
         firstInputDelay: 0, // Will be updated by observer
         timestamp: Date.now(),
         route,
-        userAgent: navigator.userAgent,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'test-environment',
       };
 
       this.metrics.push(metrics);
@@ -193,46 +200,54 @@ export const usePerformanceMonitor = () => {
 
 // Web Vitals observer setup
 const setupWebVitalsObserver = () => {
-  // Largest Contentful Paint (LCP)
-  if ('PerformanceObserver' in window) {
-    try {
-      const lcpObserver = new PerformanceObserver((entryList) => {
-        const entries = entryList.getEntries();
-        const lastEntry = entries[entries.length - 1];
-        console.log('LCP:', lastEntry.startTime);
-      });
-      lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
+  // Skip in test environments or if PerformanceObserver is not available
+  if (typeof window === 'undefined' || !('PerformanceObserver' in window) || process.env.NODE_ENV === 'test') {
+    return;
+  }
 
-      // Cumulative Layout Shift (CLS)
-      const clsObserver = new PerformanceObserver((entryList) => {
-        const entries = entryList.getEntries();
-        let cls = 0;
-        entries.forEach((entry: any) => {
-          if (!entry.hadRecentInput) {
-            cls += entry.value;
-          }
-        });
-        console.log('CLS:', cls);
-      });
-      clsObserver.observe({ entryTypes: ['layout-shift'] });
+  try {
+    // Largest Contentful Paint (LCP)
+    const lcpObserver = new PerformanceObserver((entryList) => {
+      const entries = entryList.getEntries();
+      const lastEntry = entries[entries.length - 1];
+      console.log('LCP:', lastEntry.startTime);
+    });
+    lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
 
-      // First Input Delay (FID)
-      const fidObserver = new PerformanceObserver((entryList) => {
-        const entries = entryList.getEntries();
-        entries.forEach((entry: any) => {
-          console.log('FID:', entry.processingStart - entry.startTime);
-        });
+    // Cumulative Layout Shift (CLS)
+    const clsObserver = new PerformanceObserver((entryList) => {
+      const entries = entryList.getEntries();
+      let cls = 0;
+      entries.forEach((entry: any) => {
+        if (!entry.hadRecentInput) {
+          cls += entry.value;
+        }
       });
-      fidObserver.observe({ entryTypes: ['first-input'] });
+      console.log('CLS:', cls);
+    });
+    clsObserver.observe({ entryTypes: ['layout-shift'] });
 
-    } catch (error) {
-      console.warn('Performance observers not fully supported:', error);
-    }
+    // First Input Delay (FID)
+    const fidObserver = new PerformanceObserver((entryList) => {
+      const entries = entryList.getEntries();
+      entries.forEach((entry: any) => {
+        console.log('FID:', entry.processingStart - entry.startTime);
+      });
+    });
+    fidObserver.observe({ entryTypes: ['first-input'] });
+
+  } catch (error) {
+    console.warn('Performance observers not fully supported:', error);
   }
 };
 
 // Initialize performance monitoring
 export const initializePerformanceMonitoring = () => {
+  // Skip performance monitoring in test environments
+  if (typeof window === 'undefined' || typeof document === 'undefined' || process.env.NODE_ENV === 'test') {
+    return;
+  }
+
   // Set up Web Vitals observers
   setupWebVitalsObserver();
 
