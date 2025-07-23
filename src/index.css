@@ -51,7 +51,7 @@
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground;
@@ -133,17 +133,17 @@
 .tour-highlight {
   position: relative;
   z-index: 45;
-  box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 4px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 0 4px rgba(99, 102, 241, 0.2);
   border-radius: 4px;
   animation: tour-pulse 2s infinite;
 }
 
 @keyframes tour-pulse {
   0%, 100% {
-    box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 4px rgba(99, 102, 241, 0.2);
+    box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 0 4px rgba(99, 102, 241, 0.2);
   }
   50% {
-    box-shadow: 0 0 0 2px theme(colors.primary.DEFAULT), 0 0 0 8px rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 0 8px rgba(99, 102, 241, 0.4);
   }
 }
 
@@ -177,7 +177,7 @@
   right: -2px;
   width: 8px;
   height: 8px;
-  background: theme(colors.primary.DEFAULT);
+  background: hsl(var(--primary));
   border-radius: 50%;
   animation: hint-pulse 2s infinite;
 }
@@ -195,7 +195,7 @@
 
 /* Help search highlighting */
 .help-search-highlight {
-  background-color: theme(colors.yellow.200);
+  background-color: rgb(254 240 138); /* yellow-200 equivalent */
   padding: 0 2px;
   border-radius: 2px;
 }
@@ -246,11 +246,11 @@ html {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .tour-highlight {
-    box-shadow: 0 0 0 3px theme(colors.yellow.400), 0 0 0 6px theme(colors.black);
+    box-shadow: 0 0 0 3px rgb(250 204 21), 0 0 0 6px rgb(0 0 0); /* yellow-400 and black */
   }
   
   .feature-hint::after {
-    background: theme(colors.yellow.400);
-    border: 1px solid theme(colors.black);
+    background: rgb(250 204 21); /* yellow-400 */
+    border: 1px solid rgb(0 0 0); /* black */
   }
 }

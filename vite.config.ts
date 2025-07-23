@@ -24,7 +24,7 @@ export default defineConfig(() => ({
         manualChunks: {
           'react-vendor': ['react', 'react-dom'],
           'router-vendor': ['react-router-dom'],
-          'ui-vendor': ['@headlessui/react', '@heroicons/react', '@radix-ui/react-tooltip', 'lucide-react'],
+          'ui-vendor': ['@headlessui/react', '@radix-ui/react-tooltip', 'lucide-react'],
           'state-vendor': ['zustand', '@tanstack/react-query', 'immer'],
           'utility-vendor': ['date-fns', 'uuid', 'clsx', 'tailwind-merge', 'class-variance-authority'],
         },
